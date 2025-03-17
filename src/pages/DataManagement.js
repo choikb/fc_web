@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { saveAs } from "file-saver";
+import JSZip from "jszip";
 import ApiService, { apiService } from '../services/apiService';
 
 import { Document, Packer, Paragraph, TextRun, ImageRun } from "docx";
@@ -31,6 +32,13 @@ const DataManagement = () => {
     const rulerRef = useRef(null);
     const [thumbnailStartIndex, setThumbnailStartIndex] = useState(0);
     const thumbnailsPerPage = 10; // ✅ 최대 10개만 표시
+
+    useEffect(() => {
+        if(photoList.length > 0){
+            updateSelectedImage(0);
+        }
+    }, [photoList])
+
 
     /**
      * Format memo string to make it more readable
@@ -183,21 +191,7 @@ const hwpContent = `
 
 
 
-    // // 🔥 썸네일 클릭 시 선택 / 해제
-    // const handleImageSelect = (fileURL) => {
-    //     setSelectedImages([currentImage]);
-    //     // setSelectedImages((prevSelected) => {
-    //     //     const isSelected = prevSelected.includes(fileURL);
-    //     //     const updatedSelection = isSelected
-    //     //         ? prevSelected.filter((url) => url !== fileURL) // ✅ 이미 선택된 경우 해제
-    //     //         : [...prevSelected, fileURL]; // ✅ 선택되지 않은 경우 추가
 
-    //     //     console.log(`✅ [LOG] ${isSelected ? "해제됨" : "선택됨"}: ${fileURL}`);
-    //     //     console.log("✅ [LOG] 현재 선택된 이미지 목록:", updatedSelection);
-
-    //     //     return updatedSelection;
-    //     // });
-    // };
 
     // 🔥 썸네일 클릭 시 미리보기 변경 및 선택 적용
     const handleImageSelect = (fileURL, index) => {
@@ -212,69 +206,16 @@ const hwpContent = `
         if (isAllSelected) {
             setSelectedImages([]); // 전체 해제
         } else {
-            setSelectedImages(photoList.map((media) => `https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/${media.region}/${media.incident_id}/media/${media.file_name}`));
+            setSelectedImages(photoList.map((media) => `${process.env.REACT_APP_API_BASE_URL}/admin/api/media/displayImage?filePath=${encodeURIComponent(media.storageUrl)}`));
         }
         setIsAllSelected(!isAllSelected);
     };
 
 
-    const handleDownloadSelectedImages = async () => {
-        console.log("🚀 [LOG] 다운로드 준비:", selectedImages.length);
-        if (selectedImages.length === 0) return;
-
-        console.log("🚀 [LOG] 다운로드 시작:", selectedImages);
-
-        for (const fileURL of selectedImages) {
-            try {
-                const response = await fetch(fileURL);
-                const blob = await response.blob();
-                const blobURL = window.URL.createObjectURL(blob);
-
-                const link = document.createElement("a");
-                link.href = blobURL;
-                link.download = fileURL.split("/").pop();
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                window.URL.revokeObjectURL(blobURL);
-            } catch (error) {
-                console.error("❌ 다운로드 오류:", error);
-            }
-        }
-    };
+    
 
 
 
-    // const handleDownload = async (fileURL) => {
-    //     console.log("🚀 [LOG] 다운로드 시작:", fileURL);
-    //     fileURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/충남/32/media/홍성구룡리_250209082040_ORI.jpg"
-
-    //     try {
-    //         const response = await fetch(fileURL, { mode: "no-cors" }); // 🔥 CORS 우회
-    //         const blob = await response.blob();
-    //         const blobURL = window.URL.createObjectURL(blob);
-
-    //         const link = document.createElement("a");
-    //         link.href = blobURL;
-    //         link.download = fileURL.split("/").pop();
-    //         document.body.appendChild(link);
-    //         link.click();
-    //         document.body.removeChild(link);
-
-    //         window.URL.revokeObjectURL(blobURL);
-    //     } catch (error) {
-    //         console.error("❌ 다운로드 오류:", error);
-    //     }
-    // };
-
-
-    // // 🔥 사진 이동 기능 (좌/우 버튼)
-    // const handleNext = () => {
-    //     if (photoList.length > 0) {
-    //         setCurrentIndex((prevIndex) => (prevIndex + 1) % photoList.length);
-    //     }
-    // };
 
     // 🔥 사진 이동 기능 (좌/우 버튼)
     const handleNext = () => {
@@ -289,7 +230,7 @@ const hwpContent = `
 
     // ✅ 선택된 이미지 업데이트 (좌/우 이동, 썸네일 클릭, 파일 목록 클릭 시 공통 사용)
     const updateSelectedImage = (index) => {
-        const fileURL = `https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/${photoList[index].region}/${photoList[index].incident_id}/media/${photoList[index].file_name}`;
+        const fileURL = `${process.env.REACT_APP_API_BASE_URL}/admin/api/media/displayImage?filePath=${encodeURIComponent(photoList[index].storageUrl)}`;
 
         setSelectedImages([fileURL]); // ✅ 현재 선택된 이미지만 유지
     };
@@ -319,17 +260,141 @@ const hwpContent = `
     //https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/충남/32/media/홍성구룡리_250209082040_ORI.jpg
 
 
-    /* 전체 다운로드 함수 */
-    const handleDownloadAll = () => {
-        photoList.forEach((media) => {
-            const fileURL = `https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/${media.region}/${media.incident_id}/media/${media.file_name}`;
-            const link = document.createElement("a");
-            link.href = fileURL;
-            link.download = media.file_name;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
+    const handleDownloadSelectedImages = async () => {
+        console.log("🚀 [LOG] 다운로드 준비:", selectedImages.length);
+        if (selectedImages.length === 0) return;
+
+        console.log("🚀 [LOG] 다운로드 시작:", selectedImages);
+
+        for (const fileURL of selectedImages) {
+            try {
+                const response = await fetch(fileURL);
+                const blob = await response.blob();
+                const blobURL = window.URL.createObjectURL(blob);
+
+                // 파일명 추출 및 정리
+                let fileName;
+                try {
+                    // URL에서 filePath 파라미터 추출
+                    const url = new URL(fileURL);
+                    const filePath = url.searchParams.get('filePath');
+                    
+                    if (filePath) {
+                        // uploads/250312_1_250314151613_EDIT 형태에서 실제 파일명만 추출
+                        const pathParts = filePath.split('/');
+                        fileName = pathParts[pathParts.length - 1];
+                    } else {
+                        // filePath가 없으면 URL의 마지막 부분 사용
+                        fileName = fileURL.split("/").pop();
+                    }
+                } catch (e) {
+                    // URL 파싱 오류 시 기본 방식으로 파일명 추출
+                    fileName = fileURL.split("/").pop();
+                }
+                
+                // 유효하지 않은 문자 제거
+                fileName = fileName.replace(/[/\\?%*:|"<>]/g, '-');
+                
+                const link = document.createElement("a");
+                link.href = blobURL;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                window.URL.revokeObjectURL(blobURL);
+            } catch (error) {
+                console.error("❌ 다운로드 오류:", error);
+            }
+        }
+    };
+
+
+    /* 전체 다운로드 함수 - ZIP 압축 파일로 다운로드 */
+    const handleDownloadAll = async () => {
+        console.log("🚀 [LOG] 전체 다운로드 준비:", photoList.length);
+        if (photoList.length === 0) {
+            alert("다운로드할 사진이 없습니다.");
+            return;
+        }
+        
+        try {
+            console.log("🚀 [LOG] ZIP 파일 생성 시작");
+            
+            // 사용자에게 진행 상황 표시
+            const statusElement = document.createElement("div");
+            statusElement.style.position = "fixed";
+            statusElement.style.top = "50%";
+            statusElement.style.left = "50%";
+            statusElement.style.transform = "translate(-50%, -50%)";
+            statusElement.style.padding = "20px";
+            statusElement.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+            statusElement.style.color = "white";
+            statusElement.style.borderRadius = "8px";
+            statusElement.style.zIndex = "9999";
+            statusElement.style.textAlign = "center";
+            statusElement.innerHTML = `<div>파일 압축 중...</div><div>0 / ${photoList.length}</div>`;
+            document.body.appendChild(statusElement);
+            
+            // ZIP 파일 생성
+            const zip = new JSZip();
+            let processedCount = 0;
+            
+            // 사건명 가져오기 (폴더명으로 사용)
+            const folderName = selectedCase ? selectedCase.replace(/[/\\?%*:|"<>]/g, '-') : "photos";
+            const folder = zip.folder(folderName);
+            
+            // 모든 이미지 처리
+            for (const media of photoList) {
+                try {
+                    const fileURL = `${process.env.REACT_APP_API_BASE_URL}/admin/api/media/displayImage?filePath=${encodeURIComponent(media.storageUrl)}`;
+                    const response = await fetch(fileURL);
+                    const blob = await response.blob();
+                    
+                    // 파일명 정리 (유효하지 않은 문자 제거)
+                    const fileName = (media.fileName || fileURL.split("/").pop()).replace(/[/\\?%*:|"<>]/g, '-');
+                    
+                    // ZIP에 파일 추가
+                    folder.file(fileName, blob);
+                    
+                    // 진행상황 업데이트
+                    processedCount++;
+                    statusElement.innerHTML = `<div>파일 압축 중...</div><div>${processedCount} / ${photoList.length}</div>`;
+                    
+                } catch (error) {
+                    console.error(`❌ 이미지 처리 오류 (${media.fileName}):`, error);
+                }
+            }
+            
+            // ZIP 생성 및 다운로드
+            statusElement.innerHTML = `<div>ZIP 파일 생성 중...</div>`;
+            const zipContent = await zip.generateAsync({ type: "blob" });
+            
+            // 현재 날짜와 시간을 포함한 파일명 생성
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+            const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '');
+            const zipFileName = `${folderName}.zip`;
+            
+            // 다운로드
+            saveAs(zipContent, zipFileName);
+            
+            // 상태 표시 제거
+            document.body.removeChild(statusElement);
+            
+            console.log("🚀 [LOG] ZIP 다운로드 완료:", zipFileName);
+        } catch (error) {
+            console.error("❌ ZIP 생성 오류:", error);
+            alert(`다운로드 중 오류가 발생했습니다: ${error.message}`);
+            
+            // 오류 발생 시 상태 표시 요소 제거 시도
+            try {
+                const statusElement = document.querySelector('div[style*="position: fixed"][style*="top: 50%"]');
+                if (statusElement) document.body.removeChild(statusElement);
+            } catch (e) {
+                console.error("상태 표시 요소 제거 오류:", e);
+            }
+        }
     };
 
 
@@ -582,7 +647,7 @@ const hwpContent = `
                                 </Typography>
                             )}
                         </Box>
-                    
+
                     {/* 🔥 사진 정보 전시 영역 (2열 배치) */}
                     <Box sx={{ marginTop: "16px" }}>
                         <Box sx={{ paddingTop: "0px", borderBottom: "2px solid #d1d1d1" }}>
