@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import SystemInfo from "./pages/SystemInfo";
 import Login from "./pages/Login";
 import { userService } from "./services/apiService";
+import UserManagement from "./pages/UserManagement";
 
 const App = () => {
   const [currentView, setCurrentView] = useState("dataManagement");
@@ -29,12 +30,31 @@ const App = () => {
   
   // Check authentication status on component mount
   useEffect(() => {
-    const authStatus = userService.isAuthenticated();
-    setIsAuthenticated(authStatus);
+    const checkAuth = () => {
+      const authStatus = userService.isAuthenticated();
+      setIsAuthenticated(authStatus);
+      
+      if (authStatus) {
+        setCurrentUser(userService.getCurrentUser());
+      }
+    };
     
-    if (authStatus) {
-      setCurrentUser(userService.getCurrentUser());
-    }
+    // Check auth on initial load
+    checkAuth();
+    
+    // Set up event listener for storage changes (for multi-tab support)
+    const handleStorageChange = (e) => {
+      if (e.key === 'isAuthenticated' || e.key === 'user') {
+        checkAuth();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const handleCaseSelect = (caseName) => {
@@ -44,7 +64,15 @@ const App = () => {
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
     setCurrentUser(userService.getCurrentUser());
-    setCurrentView("dataManagement");
+    
+    // Restore the last view if available, otherwise go to dataManagement
+    const lastView = sessionStorage.getItem('lastView');
+    if (lastView) {
+      setCurrentView(lastView);
+      sessionStorage.removeItem('lastView');
+    } else {
+      setCurrentView("dataManagement");
+    }
   };
   
   const handleLogout = () => {
@@ -73,6 +101,8 @@ const App = () => {
         return <ReportGeneration handleCaseSelect={handleCaseSelect} />;
       case "settings":
         return <Settings handleCaseSelect={handleCaseSelect} />;
+      case "userManagement":
+        return <UserManagement />;
       case "systemInfo":
         return <SystemInfo handleCaseSelect={handleCaseSelect} />;
       default:
@@ -82,6 +112,11 @@ const App = () => {
 
   // If not authenticated, show login page
   if (!isAuthenticated) {
+    // Save the current view before redirecting to login
+    // This will allow us to return to the same view after login
+    if (currentView !== 'login') {
+      sessionStorage.setItem('lastView', currentView);
+    }
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
@@ -151,6 +186,20 @@ const App = () => {
                 onClick={() => setCurrentView("settings")}
               >
                 설정
+              </Button>
+              <Button
+                variant="text"
+                sx={{ 
+                  color: currentView === "userManagement" ? "#fff" : "rgba(255,255,255,0.7)", 
+                  textTransform: "none", 
+                  fontWeight: "bold",
+                  borderBottom: currentView === "userManagement" ? "2px solid white" : "none",
+                  borderRadius: 0,
+                  paddingBottom: "4px"
+                }}
+                onClick={() => setCurrentView("userManagement")}
+              >
+                사용자 관리
               </Button>
               <Button
                 variant="text"

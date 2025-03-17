@@ -54,16 +54,28 @@ const parseResponseData = (data) => {
 const apiRequest = async (endpoint, method = 'GET', body = null, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  // Get authentication data from localStorage
+  const user = localStorage.getItem('user');
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     ...options.headers
   };
+  
+  // Add authentication header if user is authenticated
+  if (isAuthenticated && user) {
+    const userData = JSON.parse(user);
+    // You can add authentication headers here if needed
+    // For example: headers['Authorization'] = `Bearer ${userData.token}`;
+  }
 
   const requestOptions = {
     method,
     mode: 'cors',
     headers,
+    credentials: 'include', // Include cookies in the request
     ...options
   };
 
@@ -75,6 +87,13 @@ const apiRequest = async (endpoint, method = 'GET', body = null, options = {}) =
     const response = await fetch(url, requestOptions);
 
     if (!response.ok) {
+      // If unauthorized (401), clear authentication and redirect to login
+      if (response.status === 401) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('isAuthenticated');
+        // Don't redirect here, let the component handle it
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
+      }
       throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
     }
 
@@ -145,9 +164,11 @@ const userService = {
       const data = await apiRequest('user/login', 'POST', credentials);
       
       // Store user data in localStorage for persistence
-      if (data && data.user_id) {
+      if (data && data.userId) {
         localStorage.setItem('user', JSON.stringify(data));
         localStorage.setItem('isAuthenticated', 'true');
+        // Store login timestamp
+        localStorage.setItem('loginTime', Date.now().toString());
       }
       
       return data;
@@ -163,6 +184,7 @@ const userService = {
   logout: () => {
     localStorage.removeItem('user');
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('loginTime');
     // Redirect to login page
     window.location.href = '/login';
   },
@@ -172,7 +194,29 @@ const userService = {
    * @returns {boolean} - True if user is authenticated
    */
   isAuthenticated: () => {
-    return localStorage.getItem('isAuthenticated') === 'true';
+    const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+    const user = localStorage.getItem('user');
+    
+    // Check if both authentication flag and user data exist
+    if (isAuth && user) {
+      // Optional: Check session expiration
+      const loginTime = localStorage.getItem('loginTime');
+      if (loginTime) {
+        const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        const currentTime = Date.now();
+        const sessionExpired = currentTime - parseInt(loginTime) > sessionDuration;
+        
+        if (sessionExpired) {
+          // Clear expired session
+          localStorage.removeItem('user');
+          localStorage.removeItem('isAuthenticated');
+          localStorage.removeItem('loginTime');
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   },
   
   /**
@@ -182,6 +226,62 @@ const userService = {
   getCurrentUser: () => {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
+  },
+
+  /**
+   * Get all users
+   * @returns {Promise<Array>} - List of users
+   */
+  getAllUsers: async () => {
+    try {
+      const data = await apiRequest('user/getAllUsers', 'POST');
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new user
+   * @param {object} userData - User data
+   * @returns {Promise<object>} - Created user data
+   */
+  createUser: async (userData) => {
+    try {
+      return await apiRequest('user/registerUser', 'POST', userData);
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update an existing user
+   * @param {object} userData - User data with userId
+   * @returns {Promise<object>} - Updated user data
+   */
+  updateUser: async (userData) => {
+    try {
+      return await apiRequest('user/updateUser', 'POST', userData);
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a user
+   * @param {object} params - Parameters with userId
+   * @returns {Promise<object>} - Result of deletion
+   */
+  deleteUser: async (params) => {
+    try {
+      return await apiRequest('user/deleteUser', 'POST', params);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      throw error;
+    }
   }
 };
 
