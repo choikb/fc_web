@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { saveAs } from "file-saver";
- 
+import { incidentService } from '../services/apiService';
+
 import { Document, Packer, Paragraph, TextRun, ImageRun } from "docx";
 import {
     Box,
@@ -115,8 +116,8 @@ const hwpContent = `
         // 🔥 2️⃣ Blob으로 변환 후 저장
        const blob = new Blob([hwpContent], { type: "text/html;charset=utf-8" });
        saveAs(blob, "화재사건_보고서.html");
- 
-    
+
+
             alert("✅ 보고서 다운로드 완료!");
         } catch (error) {
             console.error("❌ 보고서 생성 오류:", error);
@@ -308,47 +309,11 @@ const hwpContent = `
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch(
-                    "https://ev0tafewtt.apigw.ntruss.com/firecapture-api/v0001/incidents?blocking=true&result=true",
-                    {
-                        method: "POST",
-                        mode: "cors",
-                        headers: {
-                            "Content-Type": "application/json",
+                // Using the new API service to get all incidents
+                const incidents = await incidentService.getAllIncidents();
 
-                            "Accept": "application/json" // 서버 응답이 JSON이라면 추가
-                        },
-                        body: JSON.stringify({ action: "getAllIncidents" }),
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                // 🔥 Cloud Function에서 JSON.stringify()로 감싸진 경우 한 번 더 JSON.parse() 실행
-                const parsedData = typeof data.body === "string" ? JSON.parse(data.body) : data;
-                console.log("✅ [LOG] JSON 파싱 후 데이터:", parsedData);
-
-                if (parsedData.success) {
-                    const convertedData = parsedData.data.map((incident) => ({
-                        ...incident,
-                        incident_name: bufferToString(incident.incident_name, "incident_name", incident),
-                        creator_id: bufferToString(incident.creator_id, "creator_id", incident),
-                        //editor_id: bufferToString(incident.editor_id, "editor_id", incident),
-                        description: bufferToString(incident.description, "description", incident),
-                        type: bufferToString(incident.type, "type", incident),
-                        status: bufferToString(incident.status, "status", incident),
-                    }));
-
-                    console.log("✅ [LOG] 변환 후 데이터:", convertedData);
-                    setIncidentList(convertedData);
-                }
-                else {
-                    console.error("데이터 로드 실패:", data);
-                }
+                console.log("✅ [LOG] 변환 후 데이터:", incidents);
+                setIncidentList(incidents);
             } catch (error) {
                 console.error("API 요청 오류:", error);
             } finally {
@@ -484,17 +449,17 @@ const hwpContent = `
                         ) : (
                             <ul style={{ paddingLeft: "15px" }}>
                                 {incidentList?.map((incident) => (
-                                    <li key={incident.incident_id} style={{ marginBottom: "10px" }}>
+                                    <li key={incident.incidentId} style={{ marginBottom: "10px" }}>
                                         <Link
                                             href="#"
                                             underline="hover"
                                             sx={{ color: "#1976d2", cursor: "pointer" }}
-                                            onClick={() => handleCaseSelect(incident.incident_id, incident.incident_name)} // ✅ 클릭 이벤트 추가
+                                            onClick={() => handleCaseSelect(incident.incidentId, incident.incidentName)} // ✅ 클릭 이벤트 추가
                                         >
-                                            {incident.incident_name}
+                                            {incident.incidentName}
                                             <br /> {/* ✅ 줄바꿈 추가 */}
                                             <Typography variant="body2" color="gray">
-                                                {formatDate(incident.created_at)} {/* ✅ 날짜 변환 함수 적용 */}
+                                                {formatDate(incident.createdAt)} {/* ✅ 날짜 변환 함수 적용 */}
                                             </Typography>
                                         </Link>
                                     </li>
@@ -507,48 +472,7 @@ const hwpContent = `
                     </CardContent>
                 </Card>
             </Box>
-            {/*  
-            {showCasePhotos && (
-                <Box sx={{ width: "250px", height: "100%", padding: 0.5 }}>
-                    <Card sx={{ height: "100%", backgroundColor: "#fff", borderRadius: "12px" }}>
-                        <CardContent>
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                                    사건: {selectedCase}
-                                </Typography>
-                                <IconButton onClick={handleToggleCasePhotos} sx={{ color: "#1976d2" }}>
-                                    {showCasePhotos ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-                                </IconButton>
-                            </Box> 
-                            <ul style={{ paddingLeft: "10px", marginTop: "10px" }}>
-                                {photoList
-                                    ?.filter(Boolean) // 🔥 빈 값(null, undefined, "") 제거
-                                    .map((media, idx) => {
-                                        if (!media.file_name) return null; // 🔥 file_name이 없는 경우 건너뛰기
 
-                                        const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/"; // ✅ 스토리지 기본 경로
-                                        const fileURL = `${baseURL}${media.region}/${media.incident_id}/media/${media.file_name}`; // ✅ 파일 URL 생성
-
-                                        const trimmedCaseName = selectedCase.replace(/\s/g, ""); // 모든 공백 제거
-
-                                        // 🔥 사건명과 확장자 제거
-                                        const cleanedFileName = media.file_name
-                                            .replace(new RegExp(`^${trimmedCaseName}_`), "") // 사건명 제거
-                                            .replace(/\.(jpg|jpeg|png|mp4)$/i, ""); // 확장자 제거
-
-
-                                        return (
-                                            <li key={idx} style={{ marginBottom: "5px" }}>
-                                                <Link href={fileURL} target="_blank" underline="hover" sx={{ color: "#1976d2" }}>
-                                                    {cleanedFileName}    </Link>
-                                            </li>
-                                        );
-                                    })}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                </Box>
-            )} */}
             {/* 사건별 미디어 목록 (사건 선택 시 표시) */}
             {showCasePhotos && (
                 <Box sx={{ width: "300px", height: "100%", padding: 0.5 }}>
@@ -686,8 +610,8 @@ const hwpContent = `
                         ref={rulerRef}
                         onMouseDown={handleRulerDrag}
                     >
-                        {photoList?.map((media, idx) => { 
-                         
+                        {photoList?.map((media, idx) => {
+
                             if (!media.file_name) return null;
                             const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";
                             const fileURL = `${baseURL}${media.region}/${media.incident_id}/media/${media.file_name}`;
@@ -813,7 +737,7 @@ const hwpContent = `
                                                     objectFit: "cover",
                                                     cursor: "pointer",
                                                     // border: isSelected ? "4px solid #1976d2" : "1px solid gray",
-                                                    //border: isCurrent ? "4px solid red" : isSelected ? "4px solid #1976d2" : "1px solid gray", // ✅ 현재 미리보기 이미지에는 빨간 테두리                                                   
+                                                    //border: isCurrent ? "4px solid red" : isSelected ? "4px solid #1976d2" : "1px solid gray", // ✅ 현재 미리보기 이미지에는 빨간 테두리
                                                     //border: isCurrent ? "4px solid red" : isSelected ? "4px solid #1976d2" : "1px solid gray",
                                                     border: isSelected ? "4px solid #1976d2" : "1px solid gray", // ✅ 선택된 경우 파란색
                                                     borderRadius: "8px",
