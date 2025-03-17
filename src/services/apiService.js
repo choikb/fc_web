@@ -89,7 +89,8 @@ const apiRequest = async (endpoint, method = 'GET', body = null, options = {}) =
 /**
  * Incident API Service
  */
-const incidentService = {
+const apiService = {
+
   /**
    * Get all incidents
    * @param {object} params - Query parameters
@@ -112,58 +113,23 @@ const incidentService = {
   },
 
   /**
-   * Get incident by ID
-   * @param {string|number} id - The incident ID
-   * @returns {Promise<object>} - The incident data
+   *
+   * @param params
+   * @returns {Promise<void>}
    */
-  getIncidentById: async (id) => {
+  getMediaList: async (params = {}) => {
     try {
-      const data = await apiRequest('incident/selectIncidentDetail', 'POST', { incident_id: id });
+      const data = await apiRequest('media/getMediaList', 'POST', params);
 
-      // Transform the data if needed
-      const transformedData = data ? {
-        ...data,
-        incident_name: bufferToString(data.incident_name, "incident_name", data),
-        creator_id: bufferToString(data.creator_id, "creator_id", data),
-        description: bufferToString(data.description, "description", data),
-        type: bufferToString(data.type, "type", data),
-        status: bufferToString(data.status, "status", data),
-      } : null;
-
-      return transformedData;
+      return data;
     } catch (error) {
-      console.error(`Failed to fetch incident with ID ${id}:`, error);
+      console.error('Failed to fetch incidents:', error);
       throw error;
     }
-  },
-
-  /**
-   * Create a new incident
-   * @param {object} incidentData - The incident data
-   * @returns {Promise<object>} - The created incident
-   */
-  createIncident: async (incidentData) => {
-    return apiRequest('incident/insertIncident', 'POST', incidentData);
-  },
-
-  /**
-   * Update an incident
-   * @param {object} incidentData - The incident data with ID
-   * @returns {Promise<object>} - The updated incident
-   */
-  updateIncident: async (incidentData) => {
-    return apiRequest('incident/updateIncident', 'POST', incidentData);
-  },
-
-  /**
-   * Delete an incident
-   * @param {string|number} id - The incident ID
-   * @returns {Promise<object>} - The result of the deletion
-   */
-  deleteIncident: async (id) => {
-    return apiRequest('incident/deleteIncident', 'POST', { incident_id: id });
   }
+
 };
+
 
 /**
  * Export all API services
@@ -172,12 +138,12 @@ export {
   apiRequest,
   bufferToString,
   parseResponseData,
-  incidentService
+  apiService
 };
 
 // Default export for the main API service
 export default {
-  incident: incidentService,
+  api: apiService,
   // Add more services here as needed
   // user: userService,
   // report: reportService,

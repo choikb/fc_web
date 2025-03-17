@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { saveAs } from "file-saver";
-import { incidentService } from '../services/apiService';
+import ApiService, { apiService } from '../services/apiService';
 
 import { Document, Packer, Paragraph, TextRun, ImageRun } from "docx";
 import {
@@ -31,6 +31,34 @@ const DataManagement = () => {
     const rulerRef = useRef(null);
     const [thumbnailStartIndex, setThumbnailStartIndex] = useState(0);
     const thumbnailsPerPage = 10; // ✅ 최대 10개만 표시
+
+    /**
+     * Format memo string to make it more readable
+     * Transforms format like '{1=ㄱㄱㄱㄱㄱㄱ, 2=ㄷㄷㄷㄷㄷㄷ, 3=ㄹㄹㄹㄹㄹㄹ}'
+     * to '1. ㄱㄱㄱㄱㄱㄱ\n2. ㄷㄷㄷㄷㄷㄷ\n3. ㄹㄹㄹㄹㄹㄹ'
+     * @param {string} memo - The memo string to format
+     * @returns {string} - The formatted memo string
+     */
+    const formatMemo = (memo) => {
+        if (!memo) return "";
+
+        // Check if the memo is in the expected format (starts with { and ends with })
+        if (memo.startsWith('{') && memo.endsWith('}')) {
+            // Remove the curly braces
+            const content = memo.substring(1, memo.length - 1);
+
+            // Split by comma and format each entry
+            return content.split(', ')
+                .map(entry => {
+                    const [key, value] = entry.split('=');
+                    return `${key}. ${value}`;
+                })
+                .join('\n');
+        }
+
+        // If not in the expected format, return as is
+        return memo;
+    };
 
     const handleNextThumbnails = () => {
         if (thumbnailStartIndex + thumbnailsPerPage < photoList.length) {
@@ -286,7 +314,7 @@ const hwpContent = `
     // 🔥 현재 미리보기 중인 이미지 URL 가져오기
     const currentImage =
         photoList.length > 0
-            ? `https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/${photoList[currentIndex].region}/${photoList[currentIndex].incident_id}/media/${photoList[currentIndex].file_name}`
+            ? `${process.env.REACT_APP_API_BASE_URL}/admin/api/media/displayImage?filePath=${encodeURIComponent(photoList[currentIndex].storageUrl)}`
             : null;
     //https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/충남/32/media/홍성구룡리_250209082040_ORI.jpg
 
@@ -310,7 +338,7 @@ const hwpContent = `
         const fetchData = async () => {
             try {
                 // Using the new API service to get all incidents
-                const incidents = await incidentService.getAllIncidents();
+                const incidents = await apiService.getAllIncidents();
 
                 console.log("✅ [LOG] 변환 후 데이터:", incidents);
                 setIncidentList(incidents);
@@ -332,67 +360,15 @@ const hwpContent = `
         setShowCasePhotos(true); // 사건별 사진 영역 표시
 
         try {
-            const response = await fetch(
-                "https://ev0tafewtt.apigw.ntruss.com/firecapture-api/v0001/media/media-r?blocking=true&result=true",
-                {
-                    method: "POST",
-                    mode: "cors",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                    },
-                    body: JSON.stringify({ action: "getUploadedMediaNames", incidentId: incident_id }),
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log("✅ [LOG] 사건별 사진 응답 데이터:", data);
-
-            // 🔥 Cloud Function에서 JSON.stringify()로 감싸진 경우 한 번 더 JSON.parse() 실행
-            const parsedData = typeof data.body === "string" ? JSON.parse(data.body) : data;
-            console.log("✅ [LOG] JSON 파싱 후 데이터:", parsedData);
-
-            if (parsedData.success) {
-
-                console.log("✅ [LOG] `parsedData.data` 구조 확인:", parsedData.data);
-
-                const convertedData = parsedData.data.map((media) => ({
-                    // file_name: bufferToString(media.file_name) || "파일명 없음",   // ✅ 파일명이 없으면 기본값 적용
-                    // incident_id: media.incident_id || "사건번호 없음", // ✅ 사건번호 기본값
-                    // region: bufferToString(media.region) || "지역 없음",         // ✅ 지역 기본값
-
-                    file_name: bufferToString(media.file_name, "file_name") || "파일명 없음",
-                    incident_id: media.incident_id || "사건번호 없음",
-                    region: bufferToString(media.region, "region") || "지역 없음",
-                    captured_at: bufferToString(media.captured_at) || "정보 없음",
-                    uploaded_at: bufferToString(media.uploaded_at) || "정보 없음",
-                    version: bufferToString(media.version, "version") || "original",
-                    resolution: bufferToString(media.resolution, "resolution") || "정보 없음",
-                    location_address: bufferToString(media.location_address, "location_address") || "미등록",
-                    memo: bufferToString(media.memo, "memo") || "메모 없음",
-
-                }));
-
-
-                // const convertedData = parsedData.data.map((fileName) => ({
-                //     file_name: fileName, // ✅ 파일 이름만 포함한 객체로 변환
-
-                //     incident_id: incidentid,
-                //     region: regionName,
-                // }));
-
-                console.log("✅ [LOG] 변환된 사건별 미디어 데이터:", convertedData);
-                setPhotoList(convertedData); // ✅ 변환된 사건별 미디어 리스트 저장
-            } else {
-                console.error("❌ [LOG] `success` 값이 없음:", parsedData);
-            }
+            const rsltData = await apiService.getMediaList({incidentId:incident_id});
+            console.log("✅ [LOG] 변환된 사건별 미디어 데이터:", rsltData);
+            setPhotoList(rsltData); // ✅ 변환된 사건별 미디어 리스트 저장
         } catch (error) {
-            console.error("❌ [LOG] 사건별 미디어 요청 오류:", error);
+            console.error("API 요청 오류:", error);
+        } finally {
+            setLoading(false);
         }
+
     };
 
 
@@ -525,19 +501,27 @@ const hwpContent = `
 
 
 
-            <Box sx={{ flex: 1, height: "100%", padding: 0.5 }}>
+            <Box sx={{
+                    flex: 1,
+                    padding: 0.5,
+                    height: "calc(100vh - 100px)",
+                    display: "flex",
+                    flexDirection: "column"
+                }}>
                 <Card
                     sx={{
-                        height: "100%",
+                        flex: 1,
                         backgroundColor: "#fff",
                         borderRadius: "12px",
                         display: "flex",
                         flexDirection: "column",
                         marginBottom: "0px",
-                        justifyContent: "space-between",
+                        overflow: "hidden",
+                        maxHeight: "100%"
                     }}
                 >
-                    <CardContent>
+                    {/* Header - Fixed at top */}
+                    <CardContent sx={{ padding: 2, flexShrink: 0 }}>
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                                 미리보기 [ {selectedCase} ]
@@ -546,11 +530,16 @@ const hwpContent = `
                                 {showCasePhotos ? <ChevronLeftIcon /> : <ChevronRightIcon />}
                             </IconButton>
                         </Box>
+                    </CardContent>
+
+                    {/* Make the entire content area scrollable */}
+                    <Box sx={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
+                        {/* Image preview area */}
                         <Box
                             sx={{
                                 width: "100%",
                                 //height: "900px",
-                                height: "calc(60vh - 150px)",  // ✅ 브라우저 높이의 80%로 설정 (반응형)
+                                height: "calc(60vh - 150px)",  // ✅ 브라우저 높이의 60%로 설정 (반응형)
                                 maxHeight: "900px",  // ✅ 최대 높이 제한
                                 minHeight: "400px",  // ✅ 최소 높이 설정 (너무 작아지는 것 방지)
                                 border: "2px solid #d1d1d1",
@@ -560,6 +549,7 @@ const hwpContent = `
                                 justifyContent: "center",
                                 position: "relative",
                                 backgroundColor: "#f9f9f9",
+                                marginBottom: "16px",
                             }}
                         >
                             {currentImage ? (
@@ -592,69 +582,9 @@ const hwpContent = `
                                 </Typography>
                             )}
                         </Box>
-                    </CardContent>
-
-                    {/* 🔥 썸네일 영역을 더 하단으로 이동 */}
-                    {/* <Box
-                        sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            gap: 1,
-                            padding: "20px",
-                            backgroundColor: "#f5f5f5",
-                            borderRadius: "8px",
-                            borderTop: "2px solid #d1d1d1",
-                            marginTop: "auto",
-                        }}
-                        ref={rulerRef}
-                        onMouseDown={handleRulerDrag}
-                    >
-                        {photoList?.map((media, idx) => {
-
-                            if (!media.file_name) return null;
-                            const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";
-                            const fileURL = `${baseURL}${media.region}/${media.incident_id}/media/${media.file_name}`;
-                            const isCurrent = idx === currentIndex;
-                            const isSelected = selectedImages.includes(fileURL);
-
-                            return (
-                                <Box key={idx} sx={{ position: "relative" }}>
-                                    {isCurrent && (
-                                        <Box
-                                            sx={{
-                                                position: "absolute",
-                                                top: -22,
-                                                left: 0,
-                                                width: "100%",
-                                                height: "20px", // 🔥 두께 증가
-                                                backgroundColor: "red",
-                                                borderRadius: "3px",
-                                                transition: "all 0.3s ease-in-out",
-                                            }}
-                                        />
-                                    )}
-                                    <img
-                                        src={fileURL}
-                                        alt={`썸네일-${idx}`}
-                                        style={{
-                                            width: "120px",
-                                            height: "120px",
-                                            objectFit: "cover",
-                                            cursor: "pointer",
-                                            border: isSelected ? "6px solid #1976d2" : "1px solid gray",
-                                            borderRadius: "8px",
-                                        }}
-                                        onClick={() => handleImageSelect(fileURL)}
-                                    />
-                                    <Typography variant="caption">{bufferToString(media.file_name)}</Typography>
-                                </Box>
-                            );
-                        })}
-                    </Box> */}
-
+                    
                     {/* 🔥 사진 정보 전시 영역 (2열 배치) */}
-                    <CardContent>
+                    <Box sx={{ marginTop: "16px" }}>
                         <Box sx={{ paddingTop: "0px", borderBottom: "2px solid #d1d1d1" }}>
                             <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 1 }}>
                                 📌 사진 정보
@@ -664,22 +594,34 @@ const hwpContent = `
                                     {/* 왼쪽 정보 (사건명, 사진명, 촬영일자, 업로드일자) */}
                                     <Grid item xs={6}>
                                         <Typography variant="body1"><strong>📁 사건명:</strong> {selectedCase || "미지정"}</Typography>
-                                        <Typography variant="body1"><strong>📷 사진명:</strong> {photoList[currentIndex]?.file_name || "이름 없음"}</Typography>
-                                        <Typography variant="body1"><strong>📅 촬영일자:</strong> {photoList[currentIndex]?.captured_at || "정보 없음"}</Typography>
-                                        <Typography variant="body1"><strong>📤 업로드일자:</strong> {photoList[currentIndex]?.uploaded_at || "정보 없음"}</Typography>
+                                        <Typography variant="body1"><strong>📷 사진명:</strong> {photoList[currentIndex]?.fileName || "이름 없음"}</Typography>
+                                        <Typography variant="body1"><strong>📅 촬영일자:</strong> {photoList[currentIndex]?.capturedAt || "정보 없음"}</Typography>
+                                        <Typography variant="body1"><strong>📤 업로드일자:</strong> {photoList[currentIndex]?.uploadedAt || "정보 없음"}</Typography>
                                     </Grid>
 
                                     {/* 오른쪽 정보 (원본/편집, 해상도, 위치) */}
                                     <Grid item xs={6}>
                                         <Typography variant="body1"><strong>🔄 원본/편집:</strong> {photoList[currentIndex]?.version === "edited" ? "편집됨" : "원본"}</Typography>
                                         <Typography variant="body1"><strong>🔍 해상도:</strong> {photoList[currentIndex]?.resolution || "정보 없음"}</Typography>
-                                        <Typography variant="body1"><strong>📍 위치:</strong> {photoList[currentIndex]?.location_address || "미등록"}</Typography>
+                                        <Typography variant="body1"><strong>📍 위치:</strong> {photoList[currentIndex]?.locationAddress || "미등록"}</Typography>
                                     </Grid>
 
                                     {/* 📝 메모 (하단 전체 차지) */}
                                     <Grid item xs={12}>
                                         <Typography variant="body1" sx={{ color: "blue", paddingTop: 1, borderTop: "1px solid #d1d1d1" }}>
-                                            <strong>📝 메모:</strong> {photoList[currentIndex]?.memo || "메모 없음"}
+                                            <strong>📝 메모:</strong>
+                                        </Typography>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                whiteSpace: 'pre-line',
+                                                backgroundColor: '#f5f5f5',
+                                                padding: 1.5,
+                                                borderRadius: 1,
+                                                marginTop: 0.5
+                                            }}
+                                        >
+                                            {formatMemo(photoList[currentIndex]?.memo) || "메모 없음"}
                                         </Typography>
                                     </Grid>
                                 </Grid>
@@ -689,11 +631,10 @@ const hwpContent = `
                                 </Typography>
                             )}
                         </Box>
-                    </CardContent>
+                    </Box>
 
-
-
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px" }}>
+                    {/* 섬네일 네비게이션 영역 */}
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", marginTop: "16px" }}>
                         {/* 🔥 좌측 이동 버튼 */}
                         <IconButton onClick={handlePrevThumbnails} disabled={thumbnailStartIndex === 0}>
                             <ChevronLeftIcon fontSize="large" />
@@ -757,7 +698,7 @@ const hwpContent = `
                                                     whiteSpace: "nowrap",
                                                 }}
                                             >
-                                                {media.file_name}
+                                                {media.fileName}
                                             </Typography>
                                         </Box>
                                     );
@@ -770,8 +711,8 @@ const hwpContent = `
                         </IconButton>
                     </Box>
 
-
-                    <Box sx={{ display: "flex", justifyContent: "center", paddingBottom: "10px" }}>
+                    {/* 다운로드 버튼 영역 */}
+                    <Box sx={{ display: "flex", justifyContent: "center", paddingBottom: "10px", marginTop: "16px" }}>
                         <Button variant="contained" color="primary" onClick={handleDownloadSelectedImages}>
                             선택 다운로드
                         </Button>
@@ -780,6 +721,7 @@ const hwpContent = `
                     {/* <Button variant="contained" color="secondary" onClick={handleDownloadReport}>
                         📄 보고서 다운로드
                     </Button> */}
+                    </Box>
                 </Card>
             </Box>
         </Box>
