@@ -132,20 +132,75 @@ const apiService = {
 
 
 /**
+ * User API Service
+ */
+const userService = {
+  /**
+   * Login user
+   * @param {object} credentials - User credentials (userId, password)
+   * @returns {Promise<object>} - User data
+   */
+  login: async (credentials) => {
+    try {
+      const data = await apiRequest('user/login', 'POST', credentials);
+      
+      // Store user data in localStorage for persistence
+      if (data && data.user_id) {
+        localStorage.setItem('user', JSON.stringify(data));
+        localStorage.setItem('isAuthenticated', 'true');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Logout user
+   */
+  logout: () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('isAuthenticated');
+    // Redirect to login page
+    window.location.href = '/login';
+  },
+  
+  /**
+   * Check if user is authenticated
+   * @returns {boolean} - True if user is authenticated
+   */
+  isAuthenticated: () => {
+    return localStorage.getItem('isAuthenticated') === 'true';
+  },
+  
+  /**
+   * Get current user data
+   * @returns {object|null} - User data or null if not authenticated
+   */
+  getCurrentUser: () => {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
+};
+
+/**
  * Export all API services
  */
 export {
   apiRequest,
   bufferToString,
   parseResponseData,
-  apiService
+  apiService,
+  userService
 };
 
 // Default export for the main API service
 export default {
   api: apiService,
+  user: userService,
   // Add more services here as needed
-  // user: userService,
   // report: reportService,
   // etc.
 };
