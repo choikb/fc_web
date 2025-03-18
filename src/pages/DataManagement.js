@@ -29,7 +29,13 @@ const formatMemo = (memo) => {
 const DataManagement = () => {
     const [incidentList, setIncidentList] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // 계층형 사건 목록 관리를 위한 상태
+    const [hierarchicalIncidents, setHierarchicalIncidents] = useState({});
+    const [expandedCities, setExpandedCities] = useState({});
+    const [expandedYears, setExpandedYears] = useState({});
     const [selectedCase, setSelectedCase] = useState(null);
+    const [selectedIncidentId, setSelectedIncidentId] = useState(null);
     const [showCasePhotos, setShowCasePhotos] = useState(false);
     const [photoList, setPhotoList] = useState([]); // ✅ 사건별 사진 목록
     const [selectedImages, setSelectedImages] = useState([]);
@@ -542,11 +548,60 @@ const generateSimpleReport = async () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setLoading(true);
                 // Using the new API service to get all incidents
                 const incidents = await apiService.getAllIncidents();
 
                 console.log("✅ [LOG] 변환 후 데이터:", incidents);
                 setIncidentList(incidents);
+
+                // 사건 데이터 구조 확인
+                console.log("✅ [LOG] 사건 데이터 예시:", incidents.length > 0 ? incidents[0] : "No incidents");
+
+                // 계층적 구조로 데이터 변환
+                const hierarchical = {};
+
+                incidents.forEach(incident => {
+                    // createdAt에서 연도 추출 (YYYY-MM-DD 형식 가정)
+                    let year = '미지정 연도';
+                    if (incident.createdAt && typeof incident.createdAt === 'string') {
+                        const dateMatch = incident.createdAt.match(/^(\d{4})/);
+                        if (dateMatch) {
+                            year = dateMatch[1];
+                        }
+                    }
+
+                    // 사건명에서 도시 추출 (예: "서울시 강남구 화재")
+                    let city = '';
+
+                    // 각 사건에 도시와 연도 정보 추가
+                    if(incident.city ){
+                        city = incident.city;
+                    }else{
+                        city = '미지정 지역';
+                    }
+                    incident.year = year;
+
+                    if (!hierarchical[city]) {
+                        hierarchical[city] = {};
+                    }
+
+                    if (!hierarchical[city][year]) {
+                        hierarchical[city][year] = [];
+                    }
+
+                    hierarchical[city][year].push(incident);
+                });
+
+                setHierarchicalIncidents(hierarchical);
+
+                // 기본적으로 모든 도시 펼치기
+                const initialExpandedCities = {};
+                Object.keys(hierarchical).forEach(city => {
+                    initialExpandedCities[city] = true;
+                });
+                setExpandedCities(initialExpandedCities);
+
             } catch (error) {
                 console.error("API 요청 오류:", error);
             } finally {
@@ -562,18 +617,57 @@ const generateSimpleReport = async () => {
     // 사건 선택 시 호출
     const handleCaseSelect = async (incident_id, caseName) => {
         setSelectedCase(caseName);
+        setSelectedIncidentId(incident_id); // 선택된 사건 ID 저장
         setShowCasePhotos(true); // 사건별 사진 영역 표시
 
         try {
             const rsltData = await apiService.getMediaList({incidentId:incident_id});
             console.log("✅ [LOG] 변환된 사건별 미디어 데이터:", rsltData);
             setPhotoList(rsltData); // ✅ 변환된 사건별 미디어 리스트 저장
+
+            // 선택된 사건의 도시와 연도 찾기
+            const selectedIncident = incidentList.find(incident => incident.incidentId === incident_id);
+            if (selectedIncident) {
+                // 이미 city와 year 필드가 있는지 확인
+                let city = selectedIncident.city;
+                let year = selectedIncident.year;
+
+                // city가 없으면 사건명에서 추출 시도
+                if (!city && selectedIncident.incidentName) {
+                    const cityMatch = selectedIncident.incidentName.match(/^([\uac00-\ud7a3]+(?:\s?[\uac00-\ud7a3]*\s?(?:\uc2dc|\uad70|\uad6c))?)/);
+                    if (cityMatch && cityMatch[1]) {
+                        city = cityMatch[1].trim();
+                    } else {
+                        city = '미지정 지역';
+                    }
+                }
+
+                // year가 없으면 생성일에서 추출 시도
+                if (!year && selectedIncident.createdAt) {
+                    const dateMatch = selectedIncident.createdAt.match(/^(\d{4})/);
+                    if (dateMatch) {
+                        year = dateMatch[1];
+                    } else {
+                        year = '미지정 연도';
+                    }
+                }
+
+                // 해당 도시와 연도 펼치기
+                setExpandedCities(prev => ({
+                    ...prev,
+                    [city]: true
+                }));
+
+                setExpandedYears(prev => ({
+                    ...prev,
+                    [`${city}-${year}`]: true
+                }));
+            }
         } catch (error) {
             console.error("API 요청 오류:", error);
         } finally {
             setLoading(false);
         }
-
     };
 
 
@@ -628,26 +722,96 @@ const generateSimpleReport = async () => {
                         {loading ? (
                             <CircularProgress />
                         ) : (
-                            <ul style={{ paddingLeft: "15px" }}>
-                                {incidentList?.map((incident) => (
-                                    <li key={incident.incidentId} style={{ marginBottom: "10px" }}>
-                                        <Link
-                                            href="#"
-                                            underline="hover"
-                                            sx={{ color: "#1976d2", cursor: "pointer" }}
-                                            onClick={() => handleCaseSelect(incident.incidentId, incident.incidentName)} // ✅ 클릭 이벤트 추가
+                            <div style={{ paddingLeft: "5px" }}>
+                                {Object.keys(hierarchicalIncidents).sort().map(city => (
+                                    <div key={city} style={{ marginBottom: "15px" }}>
+                                        {/* 도시 레벨 */}
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                cursor: 'pointer',
+                                                backgroundColor: '#f5f5f5',
+                                                padding: '8px',
+                                                borderRadius: '4px',
+                                                marginBottom: '5px'
+                                            }}
+                                            onClick={() => setExpandedCities(prev => ({
+                                                ...prev,
+                                                [city]: !prev[city]
+                                            }))}
                                         >
-                                            {incident.incidentName}
-                                            <br /> {/* ✅ 줄바꿈 추가 */}
-                                            <Typography variant="body2" color="gray">
-                                                {formatDate(incident.createdAt)} {/* ✅ 날짜 변환 함수 적용 */}
+                                            <span style={{ marginRight: '5px' }}>
+                                                {expandedCities[city] ? '▼' : '►'}
+                                            </span>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+                                                {city} ({Object.values(hierarchicalIncidents[city]).flat().length})
                                             </Typography>
-                                        </Link>
-                                    </li>
+                                        </div>
 
+                                        {/* 연도 레벨 */}
+                                        {expandedCities[city] && (
+                                            <div style={{ paddingLeft: "15px" }}>
+                                                {Object.keys(hierarchicalIncidents[city]).sort().reverse().map(year => (
+                                                    <div key={`${city}-${year}`} style={{ marginBottom: "10px" }}>
+                                                        <div
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                cursor: 'pointer',
+                                                                padding: '5px 0'
+                                                            }}
+                                                            onClick={() => setExpandedYears(prev => ({
+                                                                ...prev,
+                                                                [`${city}-${year}`]: !prev[`${city}-${year}`]
+                                                            }))}
+                                                        >
+                                                            <span style={{ marginRight: '5px' }}>
+                                                                {expandedYears[`${city}-${year}`] ? '▼' : '►'}
+                                                            </span>
+                                                            <Typography variant="body1" sx={{ fontWeight: 'medium', color: '#555' }}>
+                                                                {year}년 ({hierarchicalIncidents[city][year].length})
+                                                            </Typography>
+                                                        </div>
 
+                                                        {/* 개별 사건 레벨 */}
+                                                        {expandedYears[`${city}-${year}`] && (
+                                                            <ul style={{ paddingLeft: "20px", marginTop: "5px" }}>
+                                                                {hierarchicalIncidents[city][year].map((incident) => (
+                                                                    <li key={incident.incidentId} style={{
+                                                                        marginBottom: "8px",
+                                                                        backgroundColor: selectedIncidentId === incident.incidentId ? '#e3f2fd' : 'transparent',
+                                                                        padding: "5px",
+                                                                        borderRadius: "4px",
+                                                                        border: selectedIncidentId === incident.incidentId ? '1px solid #90caf9' : 'none'
+                                                                    }}>
+                                                                        <Link
+                                                                            href="#"
+                                                                            underline="hover"
+                                                                            sx={{
+                                                                                color: selectedIncidentId === incident.incidentId ? '#0d47a1' : '#1976d2',
+                                                                                cursor: "pointer",
+                                                                                fontWeight: selectedIncidentId === incident.incidentId ? 'bold' : 'normal'
+                                                                            }}
+                                                                            onClick={() => handleCaseSelect(incident.incidentId, incident.incidentName)}
+                                                                        >
+                                                                            {incident.incidentName}
+                                                                            <br />
+                                                                            <Typography variant="body2" color={selectedIncidentId === incident.incidentId ? 'text.primary' : 'gray'}>
+                                                                                {formatDate(incident.createdAt)}
+                                                                            </Typography>
+                                                                        </Link>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
                         )}
 
                     </CardContent>
@@ -655,54 +819,54 @@ const generateSimpleReport = async () => {
             </Box>
 
             {/* 사건별 미디어 목록 (사건 선택 시 표시) */}
-            {showCasePhotos && (
-                <Box sx={{ width: "300px", height: "100%", padding: 0.5 }}>
-                    <Card sx={{ height: "100%", backgroundColor: "#fff", borderRadius: "12px" }}>
-                        <CardContent>
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                                    사건: {selectedCase}
-                                </Typography>
-                                <IconButton onClick={handleToggleCasePhotos} sx={{ color: "#1976d2" }}>
-                                    {showCasePhotos ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-                                </IconButton>
-                            </Box>
+            {/*{showCasePhotos && (*/}
+            {/*    <Box sx={{ width: "300px", height: "100%", padding: 0.5 }}>*/}
+            {/*        <Card sx={{ height: "100%", backgroundColor: "#fff", borderRadius: "12px" }}>*/}
+            {/*            <CardContent>*/}
+            {/*                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>*/}
+            {/*                    <Typography variant="h6" sx={{ fontWeight: "bold" }}>*/}
+            {/*                        사건: {selectedCase}*/}
+            {/*                    </Typography>*/}
+            {/*                    <IconButton onClick={handleToggleCasePhotos} sx={{ color: "#1976d2" }}>*/}
+            {/*                        {showCasePhotos ? <ChevronLeftIcon /> : <ChevronRightIcon />}*/}
+            {/*                    </IconButton>*/}
+            {/*                </Box>*/}
 
-                            {/* 파일 목록 */}
-                            <ul style={{ paddingLeft: "10px", marginTop: "10px" }}>
-                                {photoList?.filter(Boolean).map((media, idx) => {
-                                    if (!media.fileName) return null;
+            {/*                /!* 파일 목록 *!/*/}
+            {/*                <ul style={{ paddingLeft: "10px", marginTop: "10px" }}>*/}
+            {/*                    {photoList?.filter(Boolean).map((media, idx) => {*/}
+            {/*                        if (!media.fileName) return null;*/}
 
-                                    // const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";
-                                    // const fileURL = `${baseURL}${media.region}/${media.incidentId}/media/${media.fileName}`;
+            {/*                        // const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";*/}
+            {/*                        // const fileURL = `${baseURL}${media.region}/${media.incidentId}/media/${media.fileName}`;*/}
 
-                                    const trimmedCaseName = selectedCase.replace(/\s/g, "");
+            {/*                        const trimmedCaseName = selectedCase.replace(/\s/g, "");*/}
 
-                                    // 🔥 사건명과 확장자 제거
-                                    const cleanedFileName = media.fileName
-                                        .replace(new RegExp(`^${trimmedCaseName}_`), "")
-                                        .replace(/\.(jpg|jpeg|png|mp4)$/i, "");
+            {/*                        // 🔥 사건명과 확장자 제거*/}
+            {/*                        const cleanedFileName = media.fileName*/}
+            {/*                            .replace(new RegExp(`^${trimmedCaseName}_`), "")*/}
+            {/*                            .replace(/\.(jpg|jpeg|png|mp4)$/i, "");*/}
 
-                                    return (
-                                        <li key={idx} style={{ marginBottom: "5px" }}>
-                                            <Link href="#" onClick={() => updateSelectedImage(idx)} underline="hover" sx={{ color: "#1976d2" }}>
-                                                {idx + 1}. {cleanedFileName} {/* ✅ 사진 번호 추가 및 클릭 시 미리보기 변경 */}
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </CardContent>
+            {/*                        return (*/}
+            {/*                            <li key={idx} style={{ marginBottom: "5px" }}>*/}
+            {/*                                <Link href="#" onClick={() => updateSelectedImage(idx)} underline="hover" sx={{ color: "#1976d2" }}>*/}
+            {/*                                    {idx + 1}. {cleanedFileName} /!* ✅ 사진 번호 추가 및 클릭 시 미리보기 변경 *!/*/}
+            {/*                                </Link>*/}
+            {/*                            </li>*/}
+            {/*                        );*/}
+            {/*                    })}*/}
+            {/*                </ul>*/}
+            {/*            </CardContent>*/}
 
-                        {/* 🔥 전체 다운로드 버튼 추가 */}
-                        <Box sx={{ display: "flex", justifyContent: "center", paddingBottom: "10px" }}>
-                            <Button variant="contained" color="primary" onClick={handleDownloadAll}>
-                                전체 다운로드
-                            </Button>
-                        </Box>
-                    </Card>
-                </Box>
-            )}
+            {/*            /!* 🔥 전체 다운로드 버튼 추가 *!/*/}
+            {/*            <Box sx={{ display: "flex", justifyContent: "center", paddingBottom: "10px" }}>*/}
+            {/*                <Button variant="contained" color="primary" onClick={handleDownloadAll}>*/}
+            {/*                    전체 다운로드*/}
+            {/*                </Button>*/}
+            {/*            </Box>*/}
+            {/*        </Card>*/}
+            {/*    </Box>*/}
+            {/*)}*/}
 
 
 
@@ -729,7 +893,7 @@ const generateSimpleReport = async () => {
                     <CardContent sx={{ padding: 2, flexShrink: 0 }}>
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                                미리보기 [ {selectedCase} ]
+                                사건: {selectedCase}
                             </Typography>
                             <IconButton onClick={handleToggleCasePhotos} sx={{ color: "#1976d2" }}>
                                 {showCasePhotos ? <ChevronLeftIcon /> : <ChevronRightIcon />}
@@ -920,6 +1084,9 @@ const generateSimpleReport = async () => {
                     <Box sx={{ display: "flex", justifyContent: "center", gap: "10px", paddingBottom: "10px", marginTop: "16px" }}>
                         <Button variant="contained" color="secondary" onClick={handleDownloadReport}>
                             보고서 다운로드
+                        </Button>
+                        <Button variant="contained" color="primary" onClick={handleDownloadAll}>
+                            전체 다운로드
                         </Button>
                         <Button variant="contained" color="primary" onClick={handleDownloadSelectedImages}>
                             선택 다운로드
