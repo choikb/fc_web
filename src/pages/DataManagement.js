@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import ApiService, { apiService } from '../services/apiService';
-
-import { Document, Packer, Paragraph, TextRun, ImageRun } from "docx";
 import {
     Box,
     Card,
@@ -18,6 +16,15 @@ import {
 } from "@mui/material";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+
+import { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
+
+// 메모 형식 정리 (줄바꿈 처리)
+const formatMemo = (memo) => {
+    if (!memo) return "";
+    return memo.replace(/\n/g, "\n");
+};
+
 
 const DataManagement = () => {
     const [incidentList, setIncidentList] = useState([]);
@@ -38,6 +45,12 @@ const DataManagement = () => {
             updateSelectedImage(0);
         }
     }, [photoList])
+
+    useEffect(() => {
+        if(incidentList.length > 0){
+            handleCaseSelect(incidentList[incidentList.length-1].incidentId, incidentList[incidentList.length-1].incidentName)
+        }
+    }, [incidentList]);
 
 
     /**
@@ -80,85 +93,212 @@ const DataManagement = () => {
         }
     };
 
-    const handleDownloadReport = async () => {
-        if (selectedImages.length === 0) {
-            alert("📌 다운로드할 사진을 선택하세요.");
-            return;
-        }
 
-        try {
-            // const doc = new Document({
-            //     sections: [
-            //         {
-            //             properties: {},
-            //             children: [
-            //                 new Paragraph({
-            //                     children: [
-            //                         new TextRun({
-            //                             text: "📌 화재 사건 보고서",
-            //                             bold: true,
-            //                             size: 32, // 폰트 크기
-            //                         }),
-            //                     ],
-            //                 }),
-            //                 ...selectedImages.map((fileURL, idx) =>
-            //                     new Paragraph({
-            //                         children: [
-            //                             new TextRun({
-            //                                 text: `${idx + 1}. ${fileURL.split("/").pop()}`,
-            //                                 bold: true,
-            //                                 size: 24,
-            //                             }),
-            //                             new ImageRun({
-            //                                 data: fetch(fileURL).then((res) => res.blob()),
-            //                                 transformation: { width: 500, height: 300 },
-            //                             }),
-            //                         ],
-            //                     })
-            //                 ),
-            //             ],
-            //         },
-            //     ],
-            // });
 
-const hwpContent = `
-            <!DOCTYPE html>
-            <html lang="ko">
-            <head>
-                <meta charset="UTF-8">
-                <title>화재 사건 보고서</title>
-                <style>
-                    body { font-family: "나눔고딕", sans-serif; line-height: 1.6; }
-                    h1 { text-align: center; color: red; }
-                    .section { margin-bottom: 20px; }
-                    .photo { font-weight: bold; color: blue; }
-                </style>
-            </head>
-            <body>
-                <h1>🔥 화재 사건 보고서</h1>
-                <p><strong>📁 사건명:</strong> ${selectedCase || "사건명 없음"}</p>
+// HTML 보고서용 메모 형식 처리 함수
+const formatMemoForHtml = (memo) => {
+    if (!memo) return "";
 
-                ${photoList.map((media, index) => `
-                    <div class="section">
-                        <p class="photo">${index + 1}. 📷 파일명: ${media.file_name || "파일명 없음"}</p>
-                        <p>📅 촬영일자: ${media.captured_at || "정보 없음"}</p>
-                        <p>📍 위치: ${media.location_address || "미등록"}</p>
-                    </div>
-                `).join("")}
-            </body>
-            </html>
+    // 기존 formatMemo 함수에서 처리하는 형식인지 확인
+    if (memo.startsWith('{') && memo.endsWith('}')) {
+        // 기존 형식 처리 로직 사용
+        const formattedMemo = formatMemo(memo);
+        // 줄바꿈을 HTML 줄바꿈으로 변환
+        return formattedMemo.replace(/\n/g, "<br>");
+    }
+
+    // 일반 텍스트인 경우 줄바꿈만 처리
+    return memo.replace(/\n/g, "<br>");
+};
+
+// 보고서 다운로드 함수
+const handleDownloadReport = () => {
+    console.log("보고서 다운로드 버튼 클릭됨");
+
+    if (photoList.length === 0) {
+        alert("보고서에 포함할 사진이 없습니다.");
+        return;
+    }
+
+    // 상태 표시
+    alert(`현재 ${photoList.length}개의 사진이 있습니다. 보고서 생성을 시작합니다.`);
+
+    // 보고서 생성 및 다운로드 함수 호출
+    generateSimpleReport();
+};
+
+// 새로운 심플 보고서 생성 함수 - HTML 기반
+const generateSimpleReport = async () => {
+    try {
+        const statusElement = document.createElement("div");
+        statusElement.style.position = "fixed";
+        statusElement.style.top = "50%";
+        statusElement.style.left = "50%";
+        statusElement.style.transform = "translate(-50%, -50%)";
+        statusElement.style.padding = "20px";
+        statusElement.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        statusElement.style.color = "white";
+        statusElement.style.borderRadius = "8px";
+        statusElement.style.zIndex = "9999";
+        statusElement.style.textAlign = "center";
+        statusElement.innerHTML = `<div>보고서 생성 중...</div><div>0 / ${photoList.length}</div>`;
+        document.body.appendChild(statusElement);
+
+        // HTML 보고서 생성 시작
+        let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>${selectedCase || "미지정"} 사진 보고서</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { text-align: center; color: #333; }
+                .date { text-align: right; color: #666; margin-bottom: 30px; }
+                .photo-container { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+                h2 { color: #444; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+                table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                table, th, td { border: 1px solid #ddd; }
+                th, td { padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                img { max-width: 100%; height: auto; display: block; margin: 15px auto; }
+                .memo { background-color: #f9f9f9; padding: 10px; border-left: 3px solid #ccc; }
+                .divider { border-top: 1px dashed #ccc; margin: 30px 0; }
+                .print-button { position: fixed; top: 20px; right: 20px; background-color: #4CAF50; color: white; border: none; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 4px; }
+                .print-button:hover { background-color: #45a049; }
+                .instructions { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px; border: 1px solid #ddd; }
+                @media print { 
+                    .print-button, .instructions { display: none; } 
+                    body { margin: 0; }
+                }
+            </style>
+            <script>
+                function printReport() {
+                    window.print();
+                }
+            </script>
+        </head>
+        <body>
+            <button class="print-button" onclick="printReport()">프린트 / PDF 저장</button>
+            <h1>${selectedCase || "미지정"} 사진 보고서</h1>
+            <div class="date">생성일: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div class="instructions">
+                <strong>HWP 파일로 변환하는 방법:</strong><br>
+                1. 위 '프린트 / PDF 저장' 버튼을 클릭하여 PDF로 저장합니다.<br>
+                2. 저장된 PDF 파일을 한컴오피스에서 열어 HWP 형식으로 저장합니다.<br>
+            </div>
         `;
 
-        // 🔥 2️⃣ Blob으로 변환 후 저장
-       const blob = new Blob([hwpContent], { type: "text/html;charset=utf-8" });
-       saveAs(blob, "화재사건_보고서.html");
+        // 각 사진 정보 추가
+        let processedCount = 0;
 
+        for (const [index, photo] of photoList.entries()) {
+            try {
+                // 진행상황 업데이트
+                processedCount++;
+                statusElement.innerHTML = `<div>보고서 생성 중...</div><div>${processedCount} / ${photoList.length}</div>`;
 
-            alert("✅ 보고서 다운로드 완료!");
-        } catch (error) {
-            console.error("❌ 보고서 생성 오류:", error);
+                // 사진 섹션 시작
+                htmlContent += `
+                <div class="photo-container">
+                    <h2>사진 ${index + 1}: ${photo.fileName || "이름 없음"}</h2>
+                `;
+
+                // 사진 정보 테이블 추가
+                htmlContent += `
+                <table>
+                    <tr>
+                        <th width="20%">📁 사건명</th>
+                        <td>${selectedCase || "미지정"}</td>
+                        <th width="20%">🔄 원본/편집</th>
+                        <td>${photo.version === "edited" ? "편집됨" : "원본"}</td>
+                    </tr>
+                    <tr>
+                        <th>📷 사진명</th>
+                        <td>${photo.fileName || "이름 없음"}</td>
+                        <th>🔍 해상도</th>
+                        <td>${photo.resolution || "정보 없음"}</td>
+                    </tr>
+                    <tr>
+                        <th>📅 촬영일자</th>
+                        <td>${photo.capturedAt || "정보 없음"}</td>
+                        <th>📍 위치</th>
+                        <td>${photo.locationAddress || "미등록"}</td>
+                    </tr>
+                    <tr>
+                        <th>📤 업로드일자</th>
+                        <td colspan="3">${photo.uploadedAt || "정보 없음"}</td>
+                    </tr>
+                </table>
+                `;
+
+                // 메모 추가
+                htmlContent += `
+                <h3>📝 메모:</h3>
+                <div class="memo">${formatMemoForHtml(photo.memo) || "메모 없음"}</div>
+                `;
+
+                // 이미지 URL 추가
+                const fileURL = `${process.env.REACT_APP_API_BASE_URL}/admin/api/media/displayImage?filePath=${encodeURIComponent(photo.storageUrl)}`;
+
+                // 이미지 추가
+                htmlContent += `
+                <img src="${fileURL}" alt="${photo.fileName || '사진'}"/>
+                </div>
+                <div class="divider"></div>
+                `;
+            } catch (error) {
+                console.error(`이미지 처리 오류 (${photo.fileName}):`, error);
+                // 오류 발생 시에도 계속 진행
+                htmlContent += `
+                <div style="color: red; text-align: center; margin: 15px 0;">이미지 처리 중 오류 발생: ${photo.fileName || "이름 없음"}</div>
+                </div>
+                <div class="divider"></div>
+                `;
+            }
         }
-    };
+
+        // HTML 마무리 추가
+        htmlContent += `
+        </body>
+        </html>
+        `;
+
+        // 상태 메시지 업데이트
+        statusElement.innerHTML = `<div>보고서 생성 중...</div>`;
+
+        // HTML 보고서를 Blob으로 변환
+        const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+
+        // 현재 날짜와 시간을 포함한 파일명 생성
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+        const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '');
+        const fileName = `${selectedCase || "사진보고서"}_${dateStr}_${timeStr}.html`;
+
+        // 다운로드
+        saveAs(blob, fileName);
+
+        // 상태 표시 제거
+        document.body.removeChild(statusElement);
+
+        console.log("보고서 다운로드 완료:", fileName);
+        alert(`보고서가 생성되었습니다. (${fileName})\n\n1. HTML 파일을 브라우저에서 열어주세요.\n2. '프린트 / PDF 저장' 버튼을 클릭하여 PDF로 저장하세요.\n3. PDF 파일을 한컴오피스에서 열어 HWP 형식으로 저장할 수 있습니다.`);
+    } catch (error) {
+        console.error("보고서 생성 오류:", error);
+        alert(`보고서 생성 중 오류가 발생했습니다: ${error.message}`);
+
+        // 오류 발생 시 상태 표시 요소 제거 시도
+        try {
+            const statusElement = document.querySelector("div[style*='position: fixed'][style*='z-index: 9999']");
+            if (statusElement && statusElement.parentNode) {
+                statusElement.parentNode.removeChild(statusElement);
+            }
+        } catch (e) {
+            console.error("상태 표시 요소 제거 오류:", e);
+        }
+    }
+};
 
 
     // 🔥 키보드 이벤트 (좌/우 키)
@@ -212,7 +352,7 @@ const hwpContent = `
     };
 
 
-    
+
 
 
 
@@ -278,7 +418,7 @@ const hwpContent = `
                     // URL에서 filePath 파라미터 추출
                     const url = new URL(fileURL);
                     const filePath = url.searchParams.get('filePath');
-                    
+
                     if (filePath) {
                         // uploads/250312_1_250314151613_EDIT 형태에서 실제 파일명만 추출
                         const pathParts = filePath.split('/');
@@ -291,10 +431,10 @@ const hwpContent = `
                     // URL 파싱 오류 시 기본 방식으로 파일명 추출
                     fileName = fileURL.split("/").pop();
                 }
-                
+
                 // 유효하지 않은 문자 제거
                 fileName = fileName.replace(/[/\\?%*:|"<>]/g, '-');
-                
+
                 const link = document.createElement("a");
                 link.href = blobURL;
                 link.download = fileName;
@@ -317,10 +457,10 @@ const hwpContent = `
             alert("다운로드할 사진이 없습니다.");
             return;
         }
-        
+
         try {
             console.log("🚀 [LOG] ZIP 파일 생성 시작");
-            
+
             // 사용자에게 진행 상황 표시
             const statusElement = document.createElement("div");
             statusElement.style.position = "fixed";
@@ -335,58 +475,58 @@ const hwpContent = `
             statusElement.style.textAlign = "center";
             statusElement.innerHTML = `<div>파일 압축 중...</div><div>0 / ${photoList.length}</div>`;
             document.body.appendChild(statusElement);
-            
+
             // ZIP 파일 생성
             const zip = new JSZip();
             let processedCount = 0;
-            
+
             // 사건명 가져오기 (폴더명으로 사용)
             const folderName = selectedCase ? selectedCase.replace(/[/\\?%*:|"<>]/g, '-') : "photos";
             const folder = zip.folder(folderName);
-            
+
             // 모든 이미지 처리
             for (const media of photoList) {
                 try {
                     const fileURL = `${process.env.REACT_APP_API_BASE_URL}/admin/api/media/displayImage?filePath=${encodeURIComponent(media.storageUrl)}`;
                     const response = await fetch(fileURL);
                     const blob = await response.blob();
-                    
+
                     // 파일명 정리 (유효하지 않은 문자 제거)
                     const fileName = (media.fileName || fileURL.split("/").pop()).replace(/[/\\?%*:|"<>]/g, '-');
-                    
+
                     // ZIP에 파일 추가
                     folder.file(fileName, blob);
-                    
+
                     // 진행상황 업데이트
                     processedCount++;
                     statusElement.innerHTML = `<div>파일 압축 중...</div><div>${processedCount} / ${photoList.length}</div>`;
-                    
+
                 } catch (error) {
                     console.error(`❌ 이미지 처리 오류 (${media.fileName}):`, error);
                 }
             }
-            
+
             // ZIP 생성 및 다운로드
             statusElement.innerHTML = `<div>ZIP 파일 생성 중...</div>`;
             const zipContent = await zip.generateAsync({ type: "blob" });
-            
+
             // 현재 날짜와 시간을 포함한 파일명 생성
             const now = new Date();
             const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
             const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '');
             const zipFileName = `${folderName}.zip`;
-            
+
             // 다운로드
             saveAs(zipContent, zipFileName);
-            
+
             // 상태 표시 제거
             document.body.removeChild(statusElement);
-            
+
             console.log("🚀 [LOG] ZIP 다운로드 완료:", zipFileName);
         } catch (error) {
             console.error("❌ ZIP 생성 오류:", error);
             alert(`다운로드 중 오류가 발생했습니다: ${error.message}`);
-            
+
             // 오류 발생 시 상태 표시 요소 제거 시도
             try {
                 const statusElement = document.querySelector('div[style*="position: fixed"][style*="top: 50%"]');
@@ -531,15 +671,15 @@ const hwpContent = `
                             {/* 파일 목록 */}
                             <ul style={{ paddingLeft: "10px", marginTop: "10px" }}>
                                 {photoList?.filter(Boolean).map((media, idx) => {
-                                    if (!media.file_name) return null;
+                                    if (!media.fileName) return null;
 
-                                    const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";
-                                    const fileURL = `${baseURL}${media.region}/${media.incident_id}/media/${media.file_name}`;
+                                    // const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";
+                                    // const fileURL = `${baseURL}${media.region}/${media.incidentId}/media/${media.fileName}`;
 
                                     const trimmedCaseName = selectedCase.replace(/\s/g, "");
 
                                     // 🔥 사건명과 확장자 제거
-                                    const cleanedFileName = media.file_name
+                                    const cleanedFileName = media.fileName
                                         .replace(new RegExp(`^${trimmedCaseName}_`), "")
                                         .replace(/\.(jpg|jpeg|png|mp4)$/i, "");
 
@@ -777,15 +917,15 @@ const hwpContent = `
                     </Box>
 
                     {/* 다운로드 버튼 영역 */}
-                    <Box sx={{ display: "flex", justifyContent: "center", paddingBottom: "10px", marginTop: "16px" }}>
+                    <Box sx={{ display: "flex", justifyContent: "center", gap: "10px", paddingBottom: "10px", marginTop: "16px" }}>
+                        <Button variant="contained" color="secondary" onClick={handleDownloadReport}>
+                            보고서 다운로드
+                        </Button>
                         <Button variant="contained" color="primary" onClick={handleDownloadSelectedImages}>
                             선택 다운로드
                         </Button>
                     </Box>
 
-                    {/* <Button variant="contained" color="secondary" onClick={handleDownloadReport}>
-                        📄 보고서 다운로드
-                    </Button> */}
                     </Box>
                 </Card>
             </Box>
