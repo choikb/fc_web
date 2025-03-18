@@ -188,11 +188,7 @@ const generateSimpleReport = async () => {
             <button class="print-button" onclick="printReport()">프린트 / PDF 저장</button>
             <h1>${selectedCase || "미지정"} 사진 보고서</h1>
             <div class="date">생성일: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div class="instructions">
-                <strong>HWP 파일로 변환하는 방법:</strong><br>
-                1. 위 '프린트 / PDF 저장' 버튼을 클릭하여 PDF로 저장합니다.<br>
-                2. 저장된 PDF 파일을 한컴오피스에서 열어 HWP 형식으로 저장합니다.<br>
-            </div>
+            
         `;
 
         // 각 사진 정보 추가
