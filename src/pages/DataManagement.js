@@ -903,192 +903,231 @@ const generateSimpleReport = async () => {
 
                     {/* Make the entire content area scrollable */}
                     <Box sx={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
-                        {/* Image preview area */}
-                        <Box
-                            sx={{
-                                width: "100%",
-                                //height: "900px",
-                                height: "calc(60vh - 150px)",  // ✅ 브라우저 높이의 60%로 설정 (반응형)
-                                maxHeight: "900px",  // ✅ 최대 높이 제한
-                                minHeight: "400px",  // ✅ 최소 높이 설정 (너무 작아지는 것 방지)
-                                border: "2px solid #d1d1d1",
-                                borderRadius: "8px",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                position: "relative",
-                                backgroundColor: "#f9f9f9",
-                                marginBottom: "16px",
-                            }}
-                        >
-                            {currentImage ? (
-                                <>
-                                    <IconButton onClick={handlePrev} sx={{ position: "absolute", left: 10, top: "50%" }}>
-                                        <ChevronLeftIcon fontSize="large" />
-                                    </IconButton>
+                        {/* 🔥 좌우 레이아웃 배치 - 이미지 미리보기(좌측)와 정보(우측) */}
+                        <Grid container spacing={4} sx={{ marginTop: "10px", marginBottom: "20px" }}>
+                            {/* 좌측 - 이미지 미리보기 영역 */}
+                            <Grid item xs={12} md={6} lg={6}>
+                                <Box
+                                    sx={{
+                                        width: "100%",
+                                        height: "calc(70vh - 150px)",  // ✅ 브라우저 높이의 70%로 설정 (반응형)
+                                        maxHeight: "900px",  // ✅ 최대 높이 제한
+                                        minHeight: "400px",  // ✅ 최소 높이 설정 (너무 작아지는 것 방지)
+                                        border: "2px solid #d1d1d1",
+                                        borderRadius: "8px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        position: "relative",
+                                        backgroundColor: "#f9f9f9",
+                                        boxSizing: "border-box", // ✅ 경계선과 패딩을 포함한 박스 크기 설정
+                                    }}
+                                >
+                                    {currentImage ? (
+                                        <>
+                                            <IconButton onClick={handlePrev} sx={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", backgroundColor: "rgba(255,255,255,0.7)" }}>
+                                                <ChevronLeftIcon fontSize="large" />
+                                            </IconButton>
 
-                                    <img
-                                        src={currentImage}
-                                        alt="현재 미리보기"
-                                        style={{
-                                            // width: "100%",
-                                            // maxHeight: "900px",
-                                            // objectFit: "contain",
-                                            width: "100%",    // ✅ 가로 길이를 100%로 설정
-                                            height: "100%",   // ✅ 부모 Box 높이에 맞춰 자동 조정
-                                            objectFit: "contain",  // ✅ 이미지 비율 유지하면서 맞추기
-                                            borderRadius: "8px",
-                                        }}
-                                    />
-
-                                    <IconButton onClick={handleNext} sx={{ position: "absolute", right: 10, top: "50%" }}>
-                                        <ChevronRightIcon fontSize="large" />
-                                    </IconButton>
-                                </>
-                            ) : (
-                                <Typography variant="body2" sx={{ color: "gray" }}>
-                                    미리보기할 사진이 없습니다.
-                                </Typography>
-                            )}
-                        </Box>
-
-                    {/* 🔥 사진 정보 전시 영역 (2열 배치) */}
-                    <Box sx={{ marginTop: "16px" }}>
-                        <Box sx={{ paddingTop: "0px", borderBottom: "2px solid #d1d1d1" }}>
-                            <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 1 }}>
-                                📌 사진 정보
-                            </Typography>
-                            {photoList.length > 0 ? (
-                                <Grid container spacing={2}>
-                                    {/* 왼쪽 정보 (사건명, 사진명, 촬영일자, 업로드일자) */}
-                                    <Grid item xs={6}>
-                                        <Typography variant="body1"><strong>📁 사건명:</strong> {selectedCase || "미지정"}</Typography>
-                                        <Typography variant="body1"><strong>📷 사진명:</strong> {photoList[currentIndex]?.fileName || "이름 없음"}</Typography>
-                                        <Typography variant="body1"><strong>📅 촬영일자:</strong> {photoList[currentIndex]?.capturedAt || "정보 없음"}</Typography>
-                                        <Typography variant="body1"><strong>📤 업로드일자:</strong> {photoList[currentIndex]?.uploadedAt || "정보 없음"}</Typography>
-                                    </Grid>
-
-                                    {/* 오른쪽 정보 (원본/편집, 해상도, 위치) */}
-                                    <Grid item xs={6}>
-                                        <Typography variant="body1"><strong>🔄 원본/편집:</strong> {photoList[currentIndex]?.version === "edited" ? "편집됨" : "원본"}</Typography>
-                                        <Typography variant="body1"><strong>🔍 해상도:</strong> {photoList[currentIndex]?.resolution || "정보 없음"}</Typography>
-                                        <Typography variant="body1"><strong>📍 위치:</strong> {photoList[currentIndex]?.locationAddress || "미등록"}</Typography>
-                                    </Grid>
-
-                                    {/* 📝 메모 (하단 전체 차지) */}
-                                    <Grid item xs={12}>
-                                        <Typography variant="body1" sx={{ color: "blue", paddingTop: 1, borderTop: "1px solid #d1d1d1" }}>
-                                            <strong>📝 메모:</strong>
-                                        </Typography>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                whiteSpace: 'pre-line',
-                                                backgroundColor: '#f5f5f5',
-                                                padding: 1.5,
-                                                borderRadius: 1,
-                                                marginTop: 0.5
-                                            }}
-                                        >
-                                            {formatMemo(photoList[currentIndex]?.memo) || "메모 없음"}
-                                        </Typography>
-                                    </Grid>
-                                </Grid>
-                            ) : (
-                                <Typography variant="body2" sx={{ color: "gray" }}>
-                                    📌 미리보기할 사진을 선택하세요.
-                                </Typography>
-                            )}
-                        </Box>
-                    </Box>
-
-                    {/* 섬네일 네비게이션 영역 */}
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", marginTop: "16px" }}>
-                        {/* 🔥 좌측 이동 버튼 */}
-                        <IconButton onClick={handlePrevThumbnails} disabled={thumbnailStartIndex === 0}>
-                            <ChevronLeftIcon fontSize="large" />
-                        </IconButton>
-
-                        {/* 🔥 섬네일 리스트 */}
-                        <Box sx={{ display: "flex", gap: 1, overflow: "hidden", width: "100%", justifyContent: "center" }}>
-                            {photoList
-                                .slice(thumbnailStartIndex, thumbnailStartIndex + thumbnailsPerPage)
-                                .map((media, idx) => {
-                                    if (!media.file_name) return null;
-                                    const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";
-                                    const fileURL = `${baseURL}${media.region}/${media.incident_id}/media/${media.file_name}`;
-                                    const isCurrent = currentIndex === idx + thumbnailStartIndex;
-                                    const isSelected = selectedImages.includes(fileURL);
-
-                                    return (
-                                        <Box key={idx} sx={{ textAlign: "center", position: "relative" }}>
-                                            {/* 🔥 현재 미리보기 중인 이미지 표시 */}
-                                            {isCurrent && (
-                                                <Box
-                                                    sx={{
-                                                        position: "absolute",
-                                                        top: -10,
-                                                        left: 0,
-                                                        width: "100%",
-                                                        height: "8px",
-                                                        backgroundColor: "red",
-                                                        borderRadius: "3px",
-                                                    }}
-                                                />
-                                            )}
-
-                                            {/* 🔥 섬네일 이미지 */}
                                             <img
-                                                src={fileURL}
-                                                alt={`썸네일-${idx}`}
+                                                src={currentImage}
+                                                alt="현재 미리보기"
                                                 style={{
-                                                    width: "120px",
-                                                    height: "120px",
-                                                    objectFit: "cover",
-                                                    cursor: "pointer",
-                                                    // border: isSelected ? "4px solid #1976d2" : "1px solid gray",
-                                                    //border: isCurrent ? "4px solid red" : isSelected ? "4px solid #1976d2" : "1px solid gray", // ✅ 현재 미리보기 이미지에는 빨간 테두리
-                                                    //border: isCurrent ? "4px solid red" : isSelected ? "4px solid #1976d2" : "1px solid gray",
-                                                    border: isSelected ? "4px solid #1976d2" : "1px solid gray", // ✅ 선택된 경우 파란색
+                                                    width: "100%",    // ✅ 가로 길이를 100%로 설정
+                                                    height: "100%",   // ✅ 부모 Box 높이에 맞춰 자동 조정
+                                                    objectFit: "contain",  // ✅ 이미지 비율 유지하면서 맞추기
                                                     borderRadius: "8px",
                                                 }}
-                                                onClick={() => handleImageSelect(fileURL, idx)}
-                                            // onClick={() => setCurrentIndex(idx + thumbnailStartIndex)}
                                             />
 
-                                            {/* 🔥 파일명 표시 */}
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    display: "block",
-                                                    maxWidth: "120px",
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    whiteSpace: "nowrap",
-                                                }}
-                                            >
-                                                {media.fileName}
-                                            </Typography>
-                                        </Box>
-                                    );
-                                })}
-                        </Box>
+                                            <IconButton onClick={handleNext} sx={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", backgroundColor: "rgba(255,255,255,0.7)" }}>
+                                                <ChevronRightIcon fontSize="large" />
+                                            </IconButton>
+                                        </>
+                                    ) : (
+                                        <Typography variant="body2" sx={{ color: "gray" }}>
+                                            미리보기할 사진이 없습니다.
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Grid>
 
-                        {/* 🔥 우측 이동 버튼 */}
-                        <IconButton onClick={handleNextThumbnails} disabled={thumbnailStartIndex + thumbnailsPerPage >= photoList.length}>
-                            <ChevronRightIcon fontSize="large" />
-                        </IconButton>
-                    </Box>
+                            {/* 우측 - 사진 정보 영역 */}
+                            <Grid item xs={12} md={6} lg={6}>
+                                <Box sx={{
+                                    height: "calc(70vh - 150px)", // ✅ 좌측 이미지와 동일한 높이 설정
+                                    maxHeight: "900px",
+                                    minHeight: "400px",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    border: "2px solid #d1d1d1", // ✅ 좌측과 동일한 테두리 색상
+                                    borderRadius: "8px",
+                                    padding: "16px",
+                                    backgroundColor: "#f9f9f9", // ✅ 좌측과 동일한 배경색
+                                    overflow: "hidden", // 내부 컨텐츠가 넘치지 않도록 설정
+                                    boxSizing: "border-box" // ✅ 경계선과 패딩을 포함한 박스 크기 설정
+                                }}>
+                                    <Typography variant="h6" sx={{ fontWeight: "bold", marginBottom: 2, borderBottom: "2px solid #d1d1d1", paddingBottom: 1 }}>
+                                        📌 사진 정보
+                                    </Typography>
+
+                                    {/* 스크롤 가능한 컨텐츠 영역 */}
+                                    <Box sx={{
+                                        flex: 1,
+                                        overflowY: "auto",
+                                        pr: 1,
+                                        '&::-webkit-scrollbar': {
+                                            width: '8px',
+                                        },
+                                        '&::-webkit-scrollbar-thumb': {
+                                            backgroundColor: '#bbbbbb',
+                                            borderRadius: '4px',
+                                        }
+                                    }}>
+                                        {photoList.length > 0 ? (
+                                            <Box>
+                                                {/* 사건 정보 섹션 */}
+                                                <Box sx={{ mb: 3 }}>
+                                                    <Typography variant="body1" sx={{ mb: 1 }}><strong>📁 사건명:</strong> {selectedCase || "미지정"}</Typography>
+                                                    <Typography variant="body1" sx={{ mb: 1 }}><strong>📷 사진명:</strong> {photoList[currentIndex]?.fileName || "이름 없음"}</Typography>
+                                                    <Typography variant="body1" sx={{ mb: 1 }}><strong>📅 촬영일자:</strong> {photoList[currentIndex]?.capturedAt || "정보 없음"}</Typography>
+                                                    <Typography variant="body1" sx={{ mb: 1 }}><strong>📤 업로드일자:</strong> {photoList[currentIndex]?.uploadedAt || "정보 없음"}</Typography>
+                                                </Box>
+
+                                                {/* 사진 상세 정보 섹션 */}
+                                                <Box sx={{ mb: 3 }}>
+                                                    <Typography variant="body1" sx={{ mb: 1 }}><strong>🔄 원본/편집:</strong> {photoList[currentIndex]?.version === "edited" ? "편집됨" : "원본"}</Typography>
+                                                    <Typography variant="body1" sx={{ mb: 1 }}><strong>🔍 해상도:</strong> {photoList[currentIndex]?.resolution || "정보 없음"}</Typography>
+                                                    <Typography variant="body1" sx={{ mb: 1 }}><strong>📍 위치:</strong> {photoList[currentIndex]?.locationAddress || "미등록"}</Typography>
+                                                </Box>
+
+                                                {/* 메모 섹션 */}
+                                                <Box sx={{ mt: 2, borderTop: "1px solid #d1d1d1", pt: 2 }}>
+                                                    <Typography variant="body1" sx={{ color: "blue", mb: 1 }}>
+                                                        <strong>📝 메모:</strong>
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{
+                                                            whiteSpace: 'pre-line',
+                                                            backgroundColor: '#f5f5f5',
+                                                            padding: 2,
+                                                            borderRadius: 1,
+                                                            marginTop: 0.5,
+                                                            maxHeight: "calc(20vh - 100px)",
+                                                            overflowY: "auto"
+                                                        }}
+                                                    >
+                                                        {formatMemo(photoList[currentIndex]?.memo) || "메모 없음"}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="body2" sx={{ color: "gray", padding: 2 }}>
+                                                📌 미리보기할 사진을 선택하세요.
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        </Grid>
+
+                        {/* 섬네일 네비게이션 영역 */}
+                        {/*<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "10px", marginTop: "16px" }}>*/}
+                        {/*    /!* 🔥 좌측 이동 버튼 *!/*/}
+                        {/*    <IconButton onClick={handlePrevThumbnails} disabled={thumbnailStartIndex === 0}>*/}
+                        {/*        <ChevronLeftIcon fontSize="large" />*/}
+                        {/*    </IconButton>*/}
+
+                        {/*    /!* 🔥 섬네일 리스트 *!/*/}
+                        {/*    <Box sx={{ display: "flex", gap: 1, overflow: "hidden", width: "100%", justifyContent: "center" }}>*/}
+                        {/*        {photoList*/}
+                        {/*            .slice(thumbnailStartIndex, thumbnailStartIndex + thumbnailsPerPage)*/}
+                        {/*            .map((media, idx) => {*/}
+                        {/*                if (!media.file_name) return null;*/}
+                        {/*                const baseURL = "https://jpwesurfogxi27592534.gcdn.ntruss.com/fc/files/";*/}
+                        {/*                const fileURL = `${baseURL}${media.region}/${media.incident_id}/media/${media.file_name}`;*/}
+                        {/*                const isCurrent = currentIndex === idx + thumbnailStartIndex;*/}
+                        {/*                const isSelected = selectedImages.includes(fileURL);*/}
+
+                        {/*                return (*/}
+                        {/*                    <Box key={idx} sx={{ textAlign: "center", position: "relative" }}>*/}
+                        {/*                        /!* 🔥 현재 미리보기 중인 이미지 표시 *!/*/}
+                        {/*                        {isCurrent && (*/}
+                        {/*                            <Box*/}
+                        {/*                                sx={{*/}
+                        {/*                                    position: "absolute",*/}
+                        {/*                                    top: -10,*/}
+                        {/*                                    left: 0,*/}
+                        {/*                                    width: "100%",*/}
+                        {/*                                    height: "8px",*/}
+                        {/*                                    backgroundColor: "red",*/}
+                        {/*                                    borderRadius: "3px",*/}
+                        {/*                                }}*/}
+                        {/*                            />*/}
+                        {/*                        )}*/}
+
+                        {/*                        /!* 🔥 섬네일 이미지 *!/*/}
+                        {/*                        <img*/}
+                        {/*                            src={fileURL}*/}
+                        {/*                            alt={`썸네일-${idx}`}*/}
+                        {/*                            style={{*/}
+                        {/*                                width: "120px",*/}
+                        {/*                                height: "120px",*/}
+                        {/*                                objectFit: "cover",*/}
+                        {/*                                cursor: "pointer",*/}
+                        {/*                                // border: isSelected ? "4px solid #1976d2" : "1px solid gray",*/}
+                        {/*                                //border: isCurrent ? "4px solid red" : isSelected ? "4px solid #1976d2" : "1px solid gray", // ✅ 현재 미리보기 이미지에는 빨간 테두리*/}
+                        {/*                                //border: isCurrent ? "4px solid red" : isSelected ? "4px solid #1976d2" : "1px solid gray",*/}
+                        {/*                                border: isSelected ? "4px solid #1976d2" : "1px solid gray", // ✅ 선택된 경우 파란색*/}
+                        {/*                                borderRadius: "8px",*/}
+                        {/*                            }}*/}
+                        {/*                            onClick={() => handleImageSelect(fileURL, idx)}*/}
+                        {/*                        // onClick={() => setCurrentIndex(idx + thumbnailStartIndex)}*/}
+                        {/*                        />*/}
+
+                        {/*                        /!* 🔥 파일명 표시 *!/*/}
+                        {/*                        <Typography*/}
+                        {/*                            variant="caption"*/}
+                        {/*                            sx={{*/}
+                        {/*                                display: "block",*/}
+                        {/*                                maxWidth: "120px",*/}
+                        {/*                                overflow: "hidden",*/}
+                        {/*                                textOverflow: "ellipsis",*/}
+                        {/*                                whiteSpace: "nowrap",*/}
+                        {/*                            }}*/}
+                        {/*                        >*/}
+                        {/*                            {media.fileName}*/}
+                        {/*                        </Typography>*/}
+                        {/*                    </Box>*/}
+                        {/*                );*/}
+                        {/*            })}*/}
+                        {/*    </Box>*/}
+
+                        {/*    /!* 🔥 우측 이동 버튼 *!/*/}
+                        {/*    <IconButton onClick={handleNextThumbnails} disabled={thumbnailStartIndex + thumbnailsPerPage >= photoList.length}>*/}
+                        {/*        <ChevronRightIcon fontSize="large" />*/}
+                        {/*    </IconButton>*/}
+                        {/*</Box>*/}
 
                     {/* 다운로드 버튼 영역 */}
-                    <Box sx={{ display: "flex", justifyContent: "center", gap: "10px", paddingBottom: "10px", marginTop: "16px" }}>
-                        <Button variant="contained" color="secondary" onClick={handleDownloadReport}>
+                    <Box sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: "10px",
+                        padding: "16px",
+                        marginTop: "16px",
+                        backgroundColor: "#f0f0f0",
+                        borderRadius: "8px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+                    }}>
+                        <Button variant="contained" color="secondary" onClick={handleDownloadReport} sx={{ minWidth: "150px" }}>
                             보고서 다운로드
                         </Button>
-                        <Button variant="contained" color="primary" onClick={handleDownloadAll}>
+                        <Button variant="contained" color="primary" onClick={handleDownloadAll} sx={{ minWidth: "150px" }}>
                             전체 다운로드
                         </Button>
-                        <Button variant="contained" color="primary" onClick={handleDownloadSelectedImages}>
+                        <Button variant="contained" color="primary" onClick={handleDownloadSelectedImages} sx={{ minWidth: "150px" }}>
                             선택 다운로드
                         </Button>
                     </Box>
