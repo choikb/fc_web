@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  Box, 
-  IconButton, 
-  Menu, 
-  MenuItem, 
-  Avatar, 
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+  Avatar,
   Divider,
   Tooltip
 } from "@mui/material";
@@ -27,30 +27,30 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  
+
   // Check authentication status on component mount
   useEffect(() => {
     const checkAuth = () => {
       const authStatus = userService.isAuthenticated();
       setIsAuthenticated(authStatus);
-      
+
       if (authStatus) {
         setCurrentUser(userService.getCurrentUser());
       }
     };
-    
+
     // Check auth on initial load
     checkAuth();
-    
+
     // Set up event listener for storage changes (for multi-tab support)
     const handleStorageChange = (e) => {
       if (e.key === 'isAuthenticated' || e.key === 'user') {
         checkAuth();
       }
     };
-    
+
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Clean up event listener
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -60,11 +60,11 @@ const App = () => {
   const handleCaseSelect = (caseName) => {
     console.log("Selected case:", caseName);
   };
-  
+
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
     setCurrentUser(userService.getCurrentUser());
-    
+
     // Restore the last view if available, otherwise go to dataManagement
     const lastView = sessionStorage.getItem('lastView');
     if (lastView) {
@@ -74,18 +74,18 @@ const App = () => {
       setCurrentView("dataManagement");
     }
   };
-  
+
   const handleLogout = () => {
     userService.logout();
     setIsAuthenticated(false);
     setCurrentUser(null);
     handleCloseUserMenu();
   };
-  
+
   const handleUserMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
-  
+
   const handleCloseUserMenu = () => {
     setAnchorEl(null);
   };
@@ -128,14 +128,14 @@ const App = () => {
           <Typography variant="h6" sx={{ fontWeight: "bold" }}>
             통합관제 시스템
           </Typography>
-          
+
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Button
                 variant="text"
-                sx={{ 
-                  color: currentView === "dataManagement" ? "#fff" : "rgba(255,255,255,0.7)", 
-                  textTransform: "none", 
+                sx={{
+                  color: currentView === "dataManagement" ? "#fff" : "rgba(255,255,255,0.7)",
+                  textTransform: "none",
                   fontWeight: "bold",
                   borderBottom: currentView === "dataManagement" ? "2px solid white" : "none",
                   borderRadius: 0,
@@ -147,9 +147,9 @@ const App = () => {
               </Button>
               <Button
                 variant="text"
-                sx={{ 
-                  color: currentView === "dataSharing" ? "#fff" : "rgba(255,255,255,0.7)", 
-                  textTransform: "none", 
+                sx={{
+                  color: currentView === "dataSharing" ? "#fff" : "rgba(255,255,255,0.7)",
+                  textTransform: "none",
                   fontWeight: "bold",
                   borderBottom: currentView === "dataSharing" ? "2px solid white" : "none",
                   borderRadius: 0,
@@ -161,9 +161,9 @@ const App = () => {
               </Button>
               <Button
                 variant="text"
-                sx={{ 
-                  color: currentView === "reportGeneration" ? "#fff" : "rgba(255,255,255,0.7)", 
-                  textTransform: "none", 
+                sx={{
+                  color: currentView === "reportGeneration" ? "#fff" : "rgba(255,255,255,0.7)",
+                  textTransform: "none",
                   fontWeight: "bold",
                   borderBottom: currentView === "reportGeneration" ? "2px solid white" : "none",
                   borderRadius: 0,
@@ -175,9 +175,9 @@ const App = () => {
               </Button>
               <Button
                 variant="text"
-                sx={{ 
-                  color: currentView === "settings" ? "#fff" : "rgba(255,255,255,0.7)", 
-                  textTransform: "none", 
+                sx={{
+                  color: currentView === "settings" ? "#fff" : "rgba(255,255,255,0.7)",
+                  textTransform: "none",
                   fontWeight: "bold",
                   borderBottom: currentView === "settings" ? "2px solid white" : "none",
                   borderRadius: 0,
@@ -189,9 +189,9 @@ const App = () => {
               </Button>
               <Button
                 variant="text"
-                sx={{ 
-                  color: currentView === "userManagement" ? "#fff" : "rgba(255,255,255,0.7)", 
-                  textTransform: "none", 
+                sx={{
+                  color: currentView === "userManagement" ? "#fff" : "rgba(255,255,255,0.7)",
+                  textTransform: "none",
                   fontWeight: "bold",
                   borderBottom: currentView === "userManagement" ? "2px solid white" : "none",
                   borderRadius: 0,
@@ -203,9 +203,9 @@ const App = () => {
               </Button>
               <Button
                 variant="text"
-                sx={{ 
-                  color: currentView === "systemInfo" ? "#fff" : "rgba(255,255,255,0.7)", 
-                  textTransform: "none", 
+                sx={{
+                  color: currentView === "systemInfo" ? "#fff" : "rgba(255,255,255,0.7)",
+                  textTransform: "none",
                   fontWeight: "bold",
                   borderBottom: currentView === "systemInfo" ? "2px solid white" : "none",
                   borderRadius: 0,
@@ -216,13 +216,13 @@ const App = () => {
                 시스템 정보
               </Button>
             </Box>
-            
+
             {/* User profile menu */}
             <Box sx={{ ml: 2 }}>
               <Tooltip title={currentUser?.name || currentUser?.user_id || "사용자"}>
                 <IconButton onClick={handleUserMenuOpen} sx={{ p: 0, ml: 2 }}>
-                  <Avatar 
-                    alt={currentUser?.name || "User"} 
+                  <Avatar
+                    alt={currentUser?.name || "User"}
                     src="/static/images/avatar/2.jpg"
                     sx={{ bgcolor: "#1565c0" }}
                   >
@@ -255,13 +255,13 @@ const App = () => {
                   </Typography>
                 </Box>
                 <Divider />
-                <MenuItem onClick={() => {
-                  setCurrentView("settings");
-                  handleCloseUserMenu();
-                }}>
-                  <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
-                  <Typography textAlign="center">계정 설정</Typography>
-                </MenuItem>
+                {/*<MenuItem onClick={() => {*/}
+                {/*  setCurrentView("settings");*/}
+                {/*  handleCloseUserMenu();*/}
+                {/*}}>*/}
+                {/*  <SettingsIcon fontSize="small" sx={{ mr: 1 }} />*/}
+                {/*  <Typography textAlign="center">계정 설정</Typography>*/}
+                {/*</MenuItem>*/}
                 <MenuItem onClick={handleLogout}>
                   <ExitToApp fontSize="small" sx={{ mr: 1 }} />
                   <Typography textAlign="center">로그아웃</Typography>
