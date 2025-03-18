@@ -86,6 +86,20 @@ const apiRequest = async (endpoint, method = 'GET', body = null, options = {}) =
   try {
     const response = await fetch(url, requestOptions);
 
+    // Parse the response body regardless of status code
+    let responseData;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await response.json();
+    } else {
+      const text = await response.text();
+      try {
+        responseData = JSON.parse(text);
+      } catch (e) {
+        responseData = { message: text };
+      }
+    }
+
     if (!response.ok) {
       // If unauthorized (401), clear authentication and redirect to login
       if (response.status === 401) {
@@ -94,11 +108,17 @@ const apiRequest = async (endpoint, method = 'GET', body = null, options = {}) =
         // Don't redirect here, let the component handle it
         throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
       }
-      throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
+      
+      // Create a custom error object with response data
+      const error = new Error(responseData.message || `HTTP 오류! 상태 코드: ${response.status}`);
+      error.response = { 
+        status: response.status, 
+        data: responseData 
+      };
+      throw error;
     }
 
-    const data = await response.json();
-    return data;
+    return responseData;
   } catch (error) {
     console.error('API 요청 오류:', error);
     throw error;
@@ -258,7 +278,7 @@ const userService = {
 
   /**
    * Update an existing user
-   * @param {object} userData - User data with userId
+   * @param {object} userData - User data with userSeq and userId
    * @returns {Promise<object>} - Updated user data
    */
   updateUser: async (userData) => {
@@ -272,7 +292,7 @@ const userService = {
 
   /**
    * Delete a user
-   * @param {object} params - Parameters with userId
+   * @param {object} params - Parameters with userSeq
    * @returns {Promise<object>} - Result of deletion
    */
   deleteUser: async (params) => {

@@ -66,6 +66,7 @@ const UserManagement = () => {
     if (user) {
       setCurrentUser(user);
       setFormData({
+        userSeq: user.userSeq,
         userId: user.userId,
         password: '',
         name: user.name || '',
@@ -79,6 +80,7 @@ const UserManagement = () => {
     } else {
       setCurrentUser(null);
       setFormData({
+        userSeq: '',
         userId: '',
         password: '',
         name: '',
@@ -128,18 +130,35 @@ const UserManagement = () => {
       fetchUsers();
     } catch (error) {
       console.error('Failed to save user:', error);
+      
+      // Extract error message from the response if available
+      let errorMessage = '사용자 저장에 실패했습니다.';
+      
+      // Check if we have a response with an error message
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        // If we have a direct error message
+        errorMessage = error.message;
+      }
+      
+      // Check specifically for duplicate ID error
+      if (errorMessage.includes('이미 사용 중인 아이디')) {
+        errorMessage = '이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.';
+      }
+      
       setSnackbar({
         open: true,
-        message: '사용자 저장에 실패했습니다.',
+        message: errorMessage,
         severity: 'error'
       });
     }
   };
 
-  const handleDeleteUser = async (userId) => {
+  const handleDeleteUser = async (userSeq) => {
     if (window.confirm('이 사용자를 삭제하시겠습니까?')) {
       try {
-        await userService.deleteUser({ userId });
+        await userService.deleteUser({ userSeq });
         setSnackbar({
           open: true,
           message: '사용자가 성공적으로 삭제되었습니다.',
@@ -215,7 +234,7 @@ const UserManagement = () => {
                       </IconButton>
                       <IconButton
                         color="error"
-                        onClick={() => handleDeleteUser(user.userId)}
+                        onClick={() => handleDeleteUser(user.userSeq)}
                         size="small"
                       >
                         <DeleteIcon />
@@ -248,7 +267,6 @@ const UserManagement = () => {
               fullWidth
               value={formData.userId}
               onChange={handleInputChange}
-              disabled={!!currentUser}
               required
             />
             <TextField
