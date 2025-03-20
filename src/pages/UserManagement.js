@@ -130,10 +130,10 @@ const UserManagement = () => {
       fetchUsers();
     } catch (error) {
       console.error('Failed to save user:', error);
-      
+
       // Extract error message from the response if available
       let errorMessage = '사용자 저장에 실패했습니다.';
-      
+
       // Check if we have a response with an error message
       if (error.response && error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
@@ -141,12 +141,12 @@ const UserManagement = () => {
         // If we have a direct error message
         errorMessage = error.message;
       }
-      
+
       // Check specifically for duplicate ID error
       if (errorMessage.includes('이미 사용 중인 아이디')) {
         errorMessage = '이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.';
       }
-      
+
       setSnackbar({
         open: true,
         message: errorMessage,
@@ -189,13 +189,13 @@ const UserManagement = () => {
         <Typography variant="h5" component="h1" gutterBottom>
           사용자 관리
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpenDialog()}
-        >
-          새 사용자 추가
-        </Button>
+        {/*<Button*/}
+        {/*  variant="contained"*/}
+        {/*  color="primary"*/}
+        {/*  onClick={() => handleOpenDialog()}*/}
+        {/*>*/}
+        {/*  새 사용자 추가*/}
+        {/*</Button>*/}
       </Box>
 
       <Paper sx={{ flexGrow: 1, overflow: 'auto' }}>

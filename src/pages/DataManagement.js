@@ -156,7 +156,7 @@ const generateSimpleReport = async () => {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>${selectedCase || "미지정"} 사진 보고서</title>
+            <title>${selectedCase || "미지정"} 보고서</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 20px; }
                 h1 { text-align: center; color: #333; }
@@ -186,7 +186,7 @@ const generateSimpleReport = async () => {
         </head>
         <body>
             <button class="print-button" onclick="printReport()">프린트 / PDF 저장</button>
-            <h1>${selectedCase || "미지정"} 사진 보고서</h1>
+            <h1>${selectedCase || "미지정"} 보고서</h1>
             <div class="date">생성일: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
             
         `;
