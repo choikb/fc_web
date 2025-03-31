@@ -57,13 +57,13 @@ const apiRequest = async (endpoint, method = 'GET', body = null, options = {}) =
   // Get authentication data from localStorage
   const user = localStorage.getItem('user');
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  
+
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     ...options.headers
   };
-  
+
   // Add authentication header if user is authenticated
   if (isAuthenticated && user) {
     const userData = JSON.parse(user);
@@ -108,12 +108,12 @@ const apiRequest = async (endpoint, method = 'GET', body = null, options = {}) =
         // Don't redirect here, let the component handle it
         throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
       }
-      
+
       // Create a custom error object with response data
       const error = new Error(responseData.message || `HTTP 오류! 상태 코드: ${response.status}`);
-      error.response = { 
-        status: response.status, 
-        data: responseData 
+      error.response = {
+        status: response.status,
+        data: responseData
       };
       throw error;
     }
@@ -182,7 +182,7 @@ const userService = {
   login: async (credentials) => {
     try {
       const data = await apiRequest('user/login', 'POST', credentials);
-      
+
       // Store user data in localStorage for persistence
       if (data && data.userId) {
         localStorage.setItem('user', JSON.stringify(data));
@@ -190,14 +190,14 @@ const userService = {
         // Store login timestamp
         localStorage.setItem('loginTime', Date.now().toString());
       }
-      
+
       return data;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
     }
   },
-  
+
   /**
    * Logout user
    */
@@ -206,7 +206,7 @@ const userService = {
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('loginTime');
     // Redirect to login page
-    window.location.href = '/login';
+    window.location.href = '/';
   },
   
   /**
@@ -216,7 +216,7 @@ const userService = {
   isAuthenticated: () => {
     const isAuth = localStorage.getItem('isAuthenticated') === 'true';
     const user = localStorage.getItem('user');
-    
+
     // Check if both authentication flag and user data exist
     if (isAuth && user) {
       // Optional: Check session expiration
@@ -225,7 +225,7 @@ const userService = {
         const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
         const currentTime = Date.now();
         const sessionExpired = currentTime - parseInt(loginTime) > sessionDuration;
-        
+
         if (sessionExpired) {
           // Clear expired session
           localStorage.removeItem('user');
@@ -238,7 +238,7 @@ const userService = {
     }
     return false;
   },
-  
+
   /**
    * Get current user data
    * @returns {object|null} - User data or null if not authenticated
