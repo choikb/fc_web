@@ -119,7 +119,15 @@ const App = () => {
     }
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
-
+    const handleDownload = () => {
+        const fileUrl = "/install/fc_android.apk";
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.setAttribute("download", "fc_android.apk");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
   return (
     <Box sx={{ overflow: "hidden", display: "flex", flexDirection: "column", backgroundColor: "#f5f5f5", height: "100vh" }}>
       {/* 상단 메뉴바 */}
@@ -131,6 +139,20 @@ const App = () => {
 
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                    variant="text"
+                    sx={{
+                        color: "rgba(255,255,255,0.7)",
+                        textTransform: "none",
+                        fontWeight: "bold",
+                        borderBottom: "none",
+                        borderRadius: 0,
+                        paddingBottom: "4px"
+                    }}
+                    onClick={() => handleDownload()}
+                >
+                    설치파일 다운로드
+                </Button>
               <Button
                 variant="text"
                 sx={{
