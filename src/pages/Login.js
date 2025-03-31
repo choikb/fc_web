@@ -80,6 +80,15 @@ const Login = ({ onLoginSuccess }) => {
     setOpenSnackbar(false);
   };
 
+    const handleDownload = () => {
+        const fileUrl = "/install/fc_android.apk";
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.setAttribute("download", "fc_android.apk");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
   return (
     <Box
       sx={{
@@ -206,6 +215,25 @@ const Login = ({ onLoginSuccess }) => {
             >
               {loading ? <CircularProgress size={24} /> : '로그인'}
             </Button>
+              <Button
+                  type="button"
+                  onClick={() => handleDownload()}
+                  fullWidth
+                  variant="contained"
+                  disabled={loading}
+                  sx={{
+                      py: 1.5,
+                      mt: 1,
+                      mb: 2,
+                      borderRadius: 2,
+                      fontWeight: 'bold',
+                      fontSize: '1rem',
+                      textTransform: 'none',
+                      boxShadow: '0 4px 20px 0 rgba(61, 71, 82, 0.1), 0 0 0 0 rgba(0, 127, 255, 0)'
+                  }}
+              >
+                  {loading ? <CircularProgress size={24} /> : '설치파일다운로드'}
+              </Button>
           </Box>
         </CardContent>
       </Card>
