@@ -24,3 +24,5 @@ yarn-error.log*
 
 node_modules.zip
 
+yarn.lock
+package-lock.json
