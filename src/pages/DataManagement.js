@@ -140,7 +140,7 @@ const handleDownloadReportView = () => {
     const reportWindow = window.open('', '_blank', windowFeatures);
 
     // Set the path to the image file - works both locally and on server
-    const imagePath = '/화재상황보고서(홍성소방서, 2024-55).jpg';
+    const imagePath = '/report.jpg';
     const imageUrl = `${process.env.REACT_APP_API_BASE_URL}${imagePath}`;
 
     // Create HTML content for the popup window
