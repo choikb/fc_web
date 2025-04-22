@@ -118,7 +118,7 @@ const formatMemoForHtml = (memo) => {
 };
 
 // 보고서 다운로드 함수
-const handleDownloadReport = () => {
+const handleDownloadReportTemp = () => {
     console.log("보고서 다운로드 버튼 클릭됨");
 
     if (photoList.length === 0) {
@@ -132,6 +132,151 @@ const handleDownloadReport = () => {
     // 보고서 생성 및 다운로드 함수 호출
     generateSimpleReport();
 };
+
+const handleDownloadReportView = () => {
+    // Create a new window to display the report image
+    // Use specific window features to ensure it opens as a new window, not a tab
+    const windowFeatures = 'width=800,height=800,resizable=yes,scrollbars=yes,status=yes';
+    const reportWindow = window.open('', '_blank', windowFeatures);
+
+    // Set the path to the image file - works both locally and on server
+    const imagePath = '/화재상황보고서(홍성소방서, 2024-55).jpg';
+    const imageUrl = `${process.env.REACT_APP_API_BASE_URL}${imagePath}`;
+
+    // Create HTML content for the popup window
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>화재상황보고서</title>
+            <style>
+                html, body { height: 100%; margin: 0; padding: 0; }
+                body { 
+                    font-family: Arial, sans-serif; 
+                    text-align: center; 
+                    padding: 20px; 
+                    padding-bottom: 100px; /* Large bottom padding */
+                    min-height: 100%;
+                    box-sizing: border-box;
+                    position: relative;
+                }
+                .page-wrapper {
+                    min-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    padding-bottom: 150px; /* Extra space at bottom */
+                }
+                img { max-width: 100%; max-height: 70vh; }
+                .container { 
+                    flex: 1;
+                    display: flex; 
+                    flex-direction: column; 
+                    align-items: center; 
+                }
+                .button-container { 
+                    margin-top: 30px; 
+                    margin-bottom: 50px; /* More space below button */
+                    position: relative;
+                    z-index: 10; /* Ensure it's above other elements */
+                    width: 100%;
+                    display: flex;
+                    justify-content: center;
+                }
+                .spacer {
+                    height: 100px;
+                    width: 100%;
+                    flex-shrink: 0;
+                }
+                button { 
+                    padding: 12px 24px; 
+                    background-color: #1976d2; 
+                    color: white; 
+                    border: none; 
+                    border-radius: 4px; 
+                    cursor: pointer; 
+                    font-size: 18px;
+                    position: relative;
+                    z-index: 20; /* Higher z-index to ensure clickability */
+                    min-width: 150px; /* Ensure button has good width */
+                    min-height: 50px; /* Ensure button has good height */
+                    display: inline-block;
+                }
+                button:hover { background-color: #1565c0; }
+                h1 { color: #333; margin-bottom: 30px; }
+                footer {
+                    height: 80px;
+                    width: 100%;
+                    position: absolute;
+                    bottom: 0;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="page-wrapper">
+                <div class="container">
+                    <h1>화재상황보고서</h1>
+                    <img src="${imageUrl}" alt="화재상황보고서" />
+                    <div class="button-container">
+                        <button onclick="downloadImage()" id="downloadBtn">다운로드</button>
+                    </div>
+                    <script>
+                        // Make sure the button is fully clickable
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const btn = document.getElementById('downloadBtn');
+                            if (btn) {
+                                // Add extra click area
+                                btn.addEventListener('click', function(e) {
+                                    downloadImage();
+                                });
+                            }
+                        });
+                    </script>
+                    <div class="spacer"></div>
+                </div>
+                <footer></footer>
+            </div>
+            <script>
+                function downloadImage() {
+                    // Use the fetch API to get the image as a blob
+                    // This approach prevents opening a new tab
+                    fetch('${imageUrl}')
+                        .then(response => response.blob())
+                        .then(blob => {
+                            // Create a blob URL for the download
+                            const blobUrl = URL.createObjectURL(blob);
+                            
+                            // Create a hidden link element
+                            const downloadLink = document.createElement('a');
+                            downloadLink.style.display = 'none'; // Hide the link
+                            downloadLink.href = blobUrl;
+                            downloadLink.download = '화재상황보고서(홍성소방서, 2024-55).jpg';
+                            
+                            // Add to DOM, click, and remove
+                            document.body.appendChild(downloadLink);
+                            downloadLink.click();
+                            document.body.removeChild(downloadLink);
+                            
+                            // Clean up the blob URL
+                            setTimeout(() => {
+                                URL.revokeObjectURL(blobUrl);
+                            }, 100);
+                        })
+                        .catch(error => {
+                            console.error('Download failed:', error);
+                            alert('다운로드 중 오류가 발생했습니다.');
+                        });
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    // Write the HTML content to the new window
+    reportWindow.document.write(htmlContent);
+    reportWindow.document.close();
+};
+
+
 
 // 새로운 심플 보고서 생성 함수 - HTML 기반
 const generateSimpleReport = async () => {
@@ -705,22 +850,22 @@ const generateSimpleReport = async () => {
     };
 
     return (
-        //<Box sx={{ display: "flex", flex: 1, height: "100%" }}>
-        <Box sx={{ display: "flex", flexDirection: "row", height: "100%", padding: 0 }}>
+        <Box sx={{ padding: 3 }}>
 
-            {/* 사건목록 트리뷰 */}
-            <Box sx={{ width: "250px", height: "100%", padding: 0.5 }}>
-                <Card sx={{ height: "100%", backgroundColor: "#fff", borderRadius: "12px" }}>
-                    <CardContent>
-                        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: "bold" }}>
-                            화재사건목록
-                        </Typography>
-                        {loading ? (
-                            <CircularProgress />
-                        ) : (
-                            <div style={{ paddingLeft: "5px" }}>
-                                {Object.keys(hierarchicalIncidents).sort().map(city => (
-                                    <div key={city} style={{ marginBottom: "15px" }}>
+            <Box sx={{ display: "flex", flexDirection: "row", height: "100%", padding: 0 }}>
+                {/* 사건목록 트리뷰 */}
+                <Box sx={{ width: "250px", height: "100%", padding: 0.5 }}>
+                    <Card sx={{ height: "100%", backgroundColor: "#fff", borderRadius: "12px" }}>
+                        <CardContent>
+                            <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: "bold" }}>
+                                화재사건목록
+                            </Typography>
+                            {loading ? (
+                                <CircularProgress />
+                            ) : (
+                                <div style={{ paddingLeft: "5px" }}>
+                                    {Object.keys(hierarchicalIncidents).sort().map(city => (
+                                        <div key={city} style={{ marginBottom: "15px" }}>
                                         {/* 도시 레벨 */}
                                         <div
                                             style={{
@@ -805,9 +950,9 @@ const generateSimpleReport = async () => {
                                                 ))}
                                             </div>
                                         )}
-                                    </div>
-                                ))}
-                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                         )}
 
                     </CardContent>
@@ -1117,7 +1262,7 @@ const generateSimpleReport = async () => {
                         borderRadius: "8px",
                         boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
                     }}>
-                        <Button variant="contained" color="secondary" onClick={handleDownloadReport} sx={{ minWidth: "150px" }}>
+                        <Button variant="contained" color="secondary" onClick={handleDownloadReportView} sx={{ minWidth: "150px" }}>
                             보고서 다운로드
                         </Button>
                         <Button variant="contained" color="primary" onClick={handleDownloadAll} sx={{ minWidth: "150px" }}>
@@ -1130,6 +1275,7 @@ const generateSimpleReport = async () => {
 
                     </Box>
                 </Card>
+            </Box>
             </Box>
         </Box>
     );
