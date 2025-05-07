@@ -167,48 +167,48 @@ const App = () => {
               >
                 현장자료 관리
               </Button>
-              <Button
-                variant="text"
-                sx={{
-                  color: currentView === "dataSharing" ? "#fff" : "rgba(255,255,255,0.7)",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  borderBottom: currentView === "dataSharing" ? "2px solid white" : "none",
-                  borderRadius: 0,
-                  paddingBottom: "4px"
-                }}
-                onClick={() => setCurrentView("dataSharing")}
-              >
-                자료공유
-              </Button>
-              <Button
-                variant="text"
-                sx={{
-                  color: currentView === "reportGeneration" ? "#fff" : "rgba(255,255,255,0.7)",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  borderBottom: currentView === "reportGeneration" ? "2px solid white" : "none",
-                  borderRadius: 0,
-                  paddingBottom: "4px"
-                }}
-                onClick={() => setCurrentView("reportGeneration")}
-              >
-                보고서 생성
-              </Button>
-              <Button
-                variant="text"
-                sx={{
-                  color: currentView === "settings" ? "#fff" : "rgba(255,255,255,0.7)",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  borderBottom: currentView === "settings" ? "2px solid white" : "none",
-                  borderRadius: 0,
-                  paddingBottom: "4px"
-                }}
-                onClick={() => setCurrentView("settings")}
-              >
-                설정
-              </Button>
+              {/*<Button*/}
+              {/*  variant="text"*/}
+              {/*  sx={{*/}
+              {/*    color: currentView === "dataSharing" ? "#fff" : "rgba(255,255,255,0.7)",*/}
+              {/*    textTransform: "none",*/}
+              {/*    fontWeight: "bold",*/}
+              {/*    borderBottom: currentView === "dataSharing" ? "2px solid white" : "none",*/}
+              {/*    borderRadius: 0,*/}
+              {/*    paddingBottom: "4px"*/}
+              {/*  }}*/}
+              {/*  onClick={() => setCurrentView("dataSharing")}*/}
+              {/*>*/}
+              {/*  자료공유*/}
+              {/*</Button>*/}
+              {/*<Button*/}
+              {/*  variant="text"*/}
+              {/*  sx={{*/}
+              {/*    color: currentView === "reportGeneration" ? "#fff" : "rgba(255,255,255,0.7)",*/}
+              {/*    textTransform: "none",*/}
+              {/*    fontWeight: "bold",*/}
+              {/*    borderBottom: currentView === "reportGeneration" ? "2px solid white" : "none",*/}
+              {/*    borderRadius: 0,*/}
+              {/*    paddingBottom: "4px"*/}
+              {/*  }}*/}
+              {/*  onClick={() => setCurrentView("reportGeneration")}*/}
+              {/*>*/}
+              {/*  보고서 생성*/}
+              {/*</Button>*/}
+              {/*<Button*/}
+              {/*  variant="text"*/}
+              {/*  sx={{*/}
+              {/*    color: currentView === "settings" ? "#fff" : "rgba(255,255,255,0.7)",*/}
+              {/*    textTransform: "none",*/}
+              {/*    fontWeight: "bold",*/}
+              {/*    borderBottom: currentView === "settings" ? "2px solid white" : "none",*/}
+              {/*    borderRadius: 0,*/}
+              {/*    paddingBottom: "4px"*/}
+              {/*  }}*/}
+              {/*  onClick={() => setCurrentView("settings")}*/}
+              {/*>*/}
+              {/*  설정*/}
+              {/*</Button>*/}
               <Button
                 variant="text"
                 sx={{
@@ -223,20 +223,20 @@ const App = () => {
               >
                 사용자 관리
               </Button>
-              <Button
-                variant="text"
-                sx={{
-                  color: currentView === "systemInfo" ? "#fff" : "rgba(255,255,255,0.7)",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  borderBottom: currentView === "systemInfo" ? "2px solid white" : "none",
-                  borderRadius: 0,
-                  paddingBottom: "4px"
-                }}
-                onClick={() => setCurrentView("systemInfo")}
-              >
-                시스템 정보
-              </Button>
+              {/*<Button*/}
+              {/*  variant="text"*/}
+              {/*  sx={{*/}
+              {/*    color: currentView === "systemInfo" ? "#fff" : "rgba(255,255,255,0.7)",*/}
+              {/*    textTransform: "none",*/}
+              {/*    fontWeight: "bold",*/}
+              {/*    borderBottom: currentView === "systemInfo" ? "2px solid white" : "none",*/}
+              {/*    borderRadius: 0,*/}
+              {/*    paddingBottom: "4px"*/}
+              {/*  }}*/}
+              {/*  onClick={() => setCurrentView("systemInfo")}*/}
+              {/*>*/}
+              {/*  시스템 정보*/}
+              {/*</Button>*/}
             </Box>
 
             {/* User profile menu */}

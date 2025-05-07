@@ -863,7 +863,12 @@ const generateSimpleReport = async () => {
                             {loading ? (
                                 <CircularProgress />
                             ) : (
-                                <div style={{ paddingLeft: "5px" }}>
+                                <div style={{ 
+                                    paddingLeft: "5px", 
+                                    height: "calc(100vh - 200px)", 
+                                    overflowY: "auto", 
+                                    scrollbarWidth: "thin" 
+                                }}>
                                     {Object.keys(hierarchicalIncidents).sort().map(city => (
                                         <div key={city} style={{ marginBottom: "15px" }}>
                                         {/* 도시 레벨 */}
