@@ -140,7 +140,7 @@ const handleDownloadReportView = () => {
     const reportWindow = window.open('', '_blank', windowFeatures);
 
     // Set the path to the image file - works both locally and on server
-    const imagePath = '/report.jpg';
+    const imagePath = '/report2.jpeg';
     const imageUrl = `${process.env.REACT_APP_API_BASE_URL}${imagePath}`;
 
     // Create HTML content for the popup window
@@ -858,16 +858,16 @@ const generateSimpleReport = async () => {
                     <Card sx={{ height: "100%", backgroundColor: "#fff", borderRadius: "12px" }}>
                         <CardContent>
                             <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: "bold" }}>
-                                화재사건목록
+                                화재재난목록
                             </Typography>
                             {loading ? (
                                 <CircularProgress />
                             ) : (
-                                <div style={{ 
-                                    paddingLeft: "5px", 
-                                    height: "calc(100vh - 200px)", 
-                                    overflowY: "auto", 
-                                    scrollbarWidth: "thin" 
+                                <div style={{
+                                    paddingLeft: "5px",
+                                    height: "calc(100vh - 200px)",
+                                    overflowY: "auto",
+                                    scrollbarWidth: "thin"
                                 }}>
                                     {Object.keys(hierarchicalIncidents).sort().map(city => (
                                         <div key={city} style={{ marginBottom: "15px" }}>
